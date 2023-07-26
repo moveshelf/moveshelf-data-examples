@@ -5,6 +5,7 @@ sys.path.append(parentFolder)
 from moveshelf_api.api import MoveshelfApi, Metadata
 from moveshelf_api import util
 import requests
+import re
 
 ## Readme
 # The datastructure of Moveshelf is organized as follows:
@@ -34,7 +35,7 @@ mySubjectSessions = [
 ]
 
 downloadData = True            # this will download data into the selected folder below
-dataFolderSave = 'C:/temp/Moveshelf_download'   # data folder where data should be saved
+dataFolderSave = 'C:\\temp\\Moveshelf_download'   # data folder where data should be saved
 fileExtensionsToDownload = ['.c3d', '.avi']   # Provide file extensions to download or leave empty if all is needed
 stopProcessing = False
 
@@ -145,6 +146,7 @@ if not stopProcessing:
                                     file_data = requests.get(data['originalDataDownloadUri']).content
                                     # create the file in write binary mode, because the data we get from net is in binary
                                     filenameDirSave = os.path.join(dataFolderSave, subjectName, sessionName, conditionName, trialName)
+                                    filenameDirSave = re.sub(r'[*?"<>|]',"",filenameDirSave)        # remove "bad" characters from path
                                     if not os.path.isdir(filenameDirSave):
                                         os.makedirs(filenameDirSave)
                                     filenameSave = os.path.join(filenameDirSave, data['originalFileName'])
