@@ -21,6 +21,11 @@ To access the Moveshelf API an access key should be created:
 
 **The API key should be kept secret.**
 
+### Configure API environment
+Open `mvshlf-config.json` and adjust "apiUrl" for:
+* staging: "https://api.staging.moveshelf.com/graphql"
+* production: "https://api.moveshelf.com/graphql"
+
 ### Running the script
 
-Open `download_data_example.py` in your Python editor, follow the instructions, and run the script.
+Open `download_data_example.py` in your Python editor, follow the instructions, add all relevant information and run the script.
