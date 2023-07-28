@@ -25,8 +25,8 @@ myProject = '<orgName/projectName>'         # e.g. support/demoProject
 ##
 mySubjectSessions = [
     {
-        'subjectName': '<subjectName>',                # subject name, e.g. Subject1
-        'sessionNames': ['2022-5-23', 'TBD']           # list of sessions
+        'subjectName': 'Regression 18-7 GBA',                # subject name, e.g. Subject1
+        'sessionNames': ['2022-5-23', 'TBD']                 # list of sessions (NOTE: if an empty list is provided, all sessions will be included)
     },
     {
         'subjectName': '<nextSubjectName>',
@@ -97,6 +97,9 @@ if not stopProcessing:
             print('No sessions found')
         else:
             sessionNames = [s['projectPath'] for s in sessions]
+            if len(mySessions) == 0:
+                # empty list provided, download all sessions
+                mySessions = [s['projectPath'].split('/')[2] for s in sessions]
         
             for sessionName in mySessions:
                 sessionPathToFind = subjectName + '/' + sessionName
