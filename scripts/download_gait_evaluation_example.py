@@ -11,7 +11,7 @@ sys.path.append(parentFolder)
 # from. You can retrieve this by navigating moveshelf.com on the desired
 # project, patient and session. The global id is the last part of the url:
 #   http://moveshelf.com/project/<projectId>/session/<session_global_id>
-session_global_id = "U2Vzc2lvbtmtgyJGKENIpbJj61BZcL4"
+session_global_id = "<session_global_id>"
 
 # Specify the IDs of the clinicians that performed the evaluations you want to
 # extract.
