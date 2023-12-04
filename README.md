@@ -28,4 +28,4 @@ Open `mvshlf-config.json` and adjust "apiUrl" for:
 
 ### Running the script
 
-Open `download_data_example.py` in your Python editor, follow the instructions, add all relevant information and run the script.
+Open the desired example script (eg: `download_data_example.py`) in your Python editor, follow the instructions, add all relevant information and run the script by running `python scripts/download_data_example.py` (or the example file you want to run).
