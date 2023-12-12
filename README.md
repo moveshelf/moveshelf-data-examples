@@ -17,7 +17,7 @@ pip install -r requirements.txt
 To access the Moveshelf API an access key should be created:
 * Go to your profile page on Moveshelf (top-right corner):
 * Follow instructions to generate an API key (enter ID for the new key, and click 'Generate API Key'
-* Download the API key file and save `mvshlf-api-key.json` in the root folder of your Sportsmedicine Git folder.
+* Download the API key file and save `mvshlf-api-key.json` in the root folder of your Git folder.
 
 **The API key should be kept secret.**
 
