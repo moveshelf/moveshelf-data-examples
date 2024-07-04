@@ -2,7 +2,7 @@
 import os, sys, json, csv
 parentFolder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parentFolder)
-from moveshelf_api.api import MoveshelfApi, Metadata
+from moveshelf_api.api import MoveshelfApi
 from moveshelf_api import util
 import requests
 import re
@@ -36,7 +36,6 @@ mySubjectSessions = [
     }
 ]
 
-downloadData = True            # this will download data into the selected folder below
 saveCsvFile = True             # this will convert the saved json file into .csv format
 dataFolderSave = 'C:\\temp\\Moveshelf_download'   # data folder where data should be saved
 fileExtensionsToDownload = ['.json']   # Only download json files
@@ -71,7 +70,6 @@ except:
     print('The project you are looking for is not found, searching for: ' + myProject)
     stopProcessing = True
 
-
 ## Find the subject
 if not stopProcessing:
     subjects = api.getProjectSubjects(myProjectId)
@@ -87,13 +85,8 @@ if not stopProcessing:
         # Extract subject details
         subjectDetails = api.getSubjectDetails(mySubjectId)
         subjectName = subjectDetails['name']
-        ehrId = 'not defined yet'
-        if 'metadata' in subjectDetails.keys():
-            metadata = json.loads(subjectDetails['metadata'])
-            if 'ehr-id' in metadata.keys():
-                ehrId = metadata['ehr-id']
         
-        print('Subject name: ' + subjectName + ', EHR id: ' + ehrId)
+        print('Subject name: ' + subjectName)
 
         sessions = subjectDetails['sessions']
         if len(sessions) == 0:
@@ -139,40 +132,38 @@ if not stopProcessing:
                         print(*existingFileNames, sep = "\n")
 
                         ## Download data
-                        if downloadData:
-                            for data in existingAdditionalData:
-                                filename, file_extension = os.path.splitext(data['originalFileName'])
-                                if not (len(fileExtensionsToDownload) == 0 or file_extension in fileExtensionsToDownload):
-                                    continue
+                        for data in existingAdditionalData:
+                            filename, file_extension = os.path.splitext(data['originalFileName'])
+                            if not (len(fileExtensionsToDownload) == 0 or file_extension in fileExtensionsToDownload):
+                                continue
 
-                                uploadStatus = data['uploadStatus']
-                                if uploadStatus == 'Processing':
-                                    print('File ' + data['originalFileName'] + ' is still being processed, skipping download')
-                                elif uploadStatus == 'Complete':
-                                    file_data = requests.get(data['originalDataDownloadUri']).content
-                                    # create the file in write binary mode, because the data we get from net is in binary
-                                    filenameDirSave = os.path.join(dataFolderSave, subjectName, sessionName, conditionName, trialName)
-                                    filenameDirSave = re.sub(r'[*?"<>|]',"",filenameDirSave)        # remove "bad" characters from path
-                                    if not os.path.isdir(filenameDirSave):
-                                        os.makedirs(filenameDirSave)
-                                    filenameSave = os.path.join(filenameDirSave, data['originalFileName'])
-                                    with open(filenameSave, "wb") as file:
-                                        file.write(file_data)
+                            uploadStatus = data['uploadStatus']
+                            if uploadStatus == 'Processing':
+                                print('File ' + data['originalFileName'] + ' is still being processed, skipping download')
+                            elif uploadStatus == 'Complete':
+                                file_data = requests.get(data['originalDataDownloadUri']).content
+                                # create the file in write binary mode, because the data we get from net is in binary
+                                filenameDirSave = os.path.join(dataFolderSave, subjectName, sessionName, conditionName, trialName)
+                                filenameDirSave = re.sub(r'[*?"<>|]',"",filenameDirSave)        # remove "bad" characters from path
+                                if not os.path.isdir(filenameDirSave):
+                                    os.makedirs(filenameDirSave)
+                                filenameSave = os.path.join(filenameDirSave, data['originalFileName'])
+                                with open(filenameSave, "wb") as file:
+                                    file.write(file_data)
 
 
-                                    print('Downloaded ' + data['originalFileName'] + ' into ' + filenameSave)
+                                print('Downloaded ' + data['originalFileName'] + ' into ' + filenameSave)
 
-                                    if saveCsvFile:
-                                        filenameSaveCSV = os.path.join(filenameDirSave, os.path.splitext(data['originalFileName'])[0] + '.csv')
-                                        with open(filenameSave) as f:
-                                            d = json.load(f)
-                                        values = d['data'][0]['values'] # access time frames and step counts
-                                        with open(filenameSaveCSV, mode='w', newline='') as file:
-                                            writer = csv.DictWriter(file, fieldnames=["time (s)", "count"])
-                                            writer.writeheader()
-                                            for value in values:
-                                                writer.writerow({"time (s)": value["time"], "count": value["count"]})
-                                        print('Converted ' + data['originalFileName'] + ' into ' + filenameSaveCSV)
-                                else:
-                                    print('File ' + data['originalFileName'] + ' status is : ' + uploadStatus  + ', skipping download')
+                                if saveCsvFile:
+                                    filenameSaveCSV = os.path.join(filenameDirSave, os.path.splitext(data['originalFileName'])[0] + '.csv')
+                                    with open(filenameSave) as f:
+                                        d = json.load(f)
+                                    values = d['data'][0]['values'] # access time frames and step counts
+                                    with open(filenameSaveCSV, mode='w', newline='') as file:
+                                        writer = csv.DictWriter(file, fieldnames=["time (s)", "count"])
+                                        writer.writeheader()
+                                        for value in values:
+                                            writer.writerow({"time (s)": value["time"], "count": value["count"]})
+                                    print('Converted ' + data['originalFileName'] + ' into ' + filenameSaveCSV)
+
 
