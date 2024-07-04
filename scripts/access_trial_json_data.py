@@ -17,10 +17,12 @@ import re
 
 ## Instructions
 # This script will, based on subject name find the subject on Moveshelf
-# After that, the data in the session will be shown with the option to download the data and store locally (see downloadData boolean)
+# After that, the data in the session will be shown with the option to download the raw data (json files) and store locally (see downloadData boolean)
+# Before running the script
+#   - Complete the definitions of variables myProject, mySubjectSessions, dataFolderSave
 
 ## Specify the details of your data to be uploaded and where it should go
-myProject = '<orgName/projectName>'         # e.g. support/demoProject
+myProject = '<orgName/projectName>'         # e.g. support/demoProject or internal/internal_testproject_MobileR&D
 
 ##
 mySubjectSessions = [
@@ -36,7 +38,7 @@ mySubjectSessions = [
 
 downloadData = True            # this will download data into the selected folder below
 dataFolderSave = 'C:\\temp\\Moveshelf_download'   # data folder where data should be saved
-fileExtensionsToDownload = ['.c3d', '.avi']   # Provide file extensions to download or leave empty if all is needed
+fileExtensionsToDownload = ['.json']   # Only download json files
 stopProcessing = False
 
 ## Setup the API
