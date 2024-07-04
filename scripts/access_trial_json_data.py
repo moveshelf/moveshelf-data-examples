@@ -1,5 +1,5 @@
 # install required packages: pip install -r ../requirements.txt
-import os, sys, json
+import os, sys, json, csv
 parentFolder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parentFolder)
 from moveshelf_api.api import MoveshelfApi, Metadata
@@ -17,9 +17,9 @@ import re
 
 ## Instructions
 # This script will, based on subject name find the subject on Moveshelf
-# After that, the data in the session will be shown with the option to download the raw data (json files) and store locally (see downloadData boolean)
+# After that, the data in the session will be shown with the option to download the raw data (json files and optionally .csv files, see saveCsvFile boolean) and store locally (see downloadData boolean)
 # Before running the script
-#   - Complete the definitions of variables myProject, mySubjectSessions, dataFolderSave
+#   - Complete the definitions of variables myProject, mySubjectSessions, dataFolderSave and configure the boolean saveCsvFile (True or False)
 
 ## Specify the details of your data to be uploaded and where it should go
 myProject = '<orgName/projectName>'         # e.g. support/demoProject or internal/internal_testproject_MobileR&D
@@ -37,6 +37,7 @@ mySubjectSessions = [
 ]
 
 downloadData = True            # this will download data into the selected folder below
+saveCsvFile = True             # this will convert the saved json file into .csv format
 dataFolderSave = 'C:\\temp\\Moveshelf_download'   # data folder where data should be saved
 fileExtensionsToDownload = ['.json']   # Only download json files
 stopProcessing = False
@@ -160,6 +161,18 @@ if not stopProcessing:
 
 
                                     print('Downloaded ' + data['originalFileName'] + ' into ' + filenameSave)
+
+                                    if saveCsvFile:
+                                        filenameSaveCSV = os.path.join(filenameDirSave, os.path.splitext(data['originalFileName'])[0] + '.csv')
+                                        with open(filenameSave) as f:
+                                            d = json.load(f)
+                                        values = d['data'][0]['values'] # access time frames and step counts
+                                        with open(filenameSaveCSV, mode='w', newline='') as file:
+                                            writer = csv.DictWriter(file, fieldnames=["time (s)", "count"])
+                                            writer.writeheader()
+                                            for value in values:
+                                                writer.writerow({"time (s)": value["time"], "count": value["count"]})
+                                        print('Converted ' + data['originalFileName'] + ' into ' + filenameSaveCSV)
                                 else:
                                     print('File ' + data['originalFileName'] + ' status is : ' + uploadStatus  + ', skipping download')
 
