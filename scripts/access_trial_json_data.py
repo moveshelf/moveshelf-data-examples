@@ -17,22 +17,18 @@ import re
 
 ## Instructions
 # This script will, based on subject name find the subject on Moveshelf
-# After that, the data in the session will be shown with the option to download the raw data (json files and optionally .csv files, see saveCsvFile boolean) and store locally (see downloadData boolean)
-# Before running the script
-#   - Complete the definitions of variables myProject, mySubjectSessions, dataFolderSave and configure the boolean saveCsvFile (True or False)
+# After that, the raw data (json files and optionally .csv files, see saveCsvFile boolean) in the session will be downloaded and stored locally
+# Before running the script:
+#   - Complete/check the definitions of variables myProject, mySubjectSessions, dataFolderSave and configure the boolean saveCsvFile (True or False)
 
 ## Specify the details of your data to be uploaded and where it should go
-myProject = '<orgName/projectName>'         # e.g. support/demoProject or internal/internal_testproject_MobileR&D
+myProject = 'internal/internal_testproject_MobileR&D'         # e.g. support/demoProject or internal/internal_testproject_MobileR&D
 
 ##
 mySubjectSessions = [
     {
-        'subjectName': 'Regression 18-7 GBA',                # subject name, e.g. Subject1
-        'sessionNames': ['2022-5-23', 'TBD']                 # list of sessions (NOTE: if an empty list is provided, all sessions will be included)
-    },
-    {
-        'subjectName': '<nextSubjectName>',
-        'sessionNames': ['...', '...']
+        'subjectName': 'Test_TopTreat_Selma',                # subject name, e.g. Subject1
+        'sessionNames': []                 # list of sessions (NOTE: if an empty list is provided, all sessions will be included)
     }
 ]
 
@@ -158,12 +154,39 @@ if not stopProcessing:
                                     filenameSaveCSV = os.path.join(filenameDirSave, os.path.splitext(data['originalFileName'])[0] + '.csv')
                                     with open(filenameSave) as f:
                                         d = json.load(f)
-                                    values = d['data'][0]['values'] # access time frames and step counts
-                                    with open(filenameSaveCSV, mode='w', newline='') as file:
-                                        writer = csv.DictWriter(file, fieldnames=["time (s)", "count"])
-                                        writer.writeheader()
-                                        for value in values:
-                                            writer.writerow({"time (s)": value["time"], "count": value["count"]})
-                                    print('Converted ' + data['originalFileName'] + ' into ' + filenameSaveCSV)
+                                    # auxiliary function to recursively traverse through nested dictionaries to find certain target_labels
+                                    # and extract and store the values for those target labels
+                                    def extract_values(data_dict, target_labels):
+                                        extracted_values = {label: [] for label in target_labels}
+
+                                        def traverse(d):
+                                            if isinstance(d, dict):
+                                                for key, value in d.items():
+                                                    if key in target_labels:
+                                                        extracted_values[key].append(value)
+                                                    if isinstance(value, (dict, list)):
+                                                        traverse(value)
+                                            elif isinstance(d, list):
+                                                for item in d:
+                                                    traverse(item)
+
+                                        traverse(data_dict)
+                                        return extracted_values
+
+                                    target_labels = ["time", "counts"]
+                                    extracted_values = extract_values(d, target_labels)
+                                    if not all(extracted_values[label] for label in extracted_values):
+                                        print(f"Error: Could not find data for the requested labels: {target_labels}. Not writing .csv file.")
+                                    else:
+                                        with open(filenameSaveCSV, mode='w', newline='') as file:
+                                            writer = csv.writer(file)
+                                            headers = list(extracted_values.keys())
+                                            writer.writerow(headers)
+                                            # Transpose the lists of values to write rows
+                                            rows = zip(*[extracted_values[key] for key in headers])
+                                            writer.writerows(rows)
+
+                                        print('Converted ' + data['originalFileName'] + ' into ' + filenameSaveCSV)
+                                    
 
 
