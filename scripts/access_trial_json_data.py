@@ -7,6 +7,34 @@ from moveshelf_api import util
 import requests
 import re
 
+## Instructions
+# This script will, based on subject name find the subject on Moveshelf
+# After that, the raw data (json files and optionally .csv files, see saveCsvFile boolean) in the session will be downloaded and stored locally
+# Before running the script:
+#   - Complete/check the definitions of variables myProject, mySubjectSessions, dataFolderSave and configure the boolean saveCsvFile (True or False)
+
+
+# auxiliary function to recursively traverse through nested dictionaries to find certain target_labels
+# and extract and store the values for those target labels                                
+def traverse(d, extracted_values, target_labels):
+    if isinstance(d, dict):
+        for key, value in d.items():
+            if key in target_labels:
+                extracted_values[key].append(value)
+            if isinstance(value, (dict, list)):
+                traverse(value, extracted_values, target_labels)
+    elif isinstance(d, list):
+        for item in d:
+            traverse(item, extracted_values, target_labels)
+
+
+def extract_values(data_dict, target_labels):
+    extracted_values = {label: [] for label in target_labels}
+
+    traverse(data_dict, extracted_values, target_labels)
+    return extracted_values
+
+
 ## Readme
 # The datastructure of Moveshelf is organized as follows:
 # * Project: Projects are the highest level and associated to a single organization in Moveshelf.
@@ -15,20 +43,14 @@ import re
 # * Conditions: Conditions specify a group of trials that were performed within a session.
 # * Trials: Trials, aka clips, are containers used to store our data. It consists of metadata and 'Additional Data', where the actual data of a trial is stored.
 
-## Instructions
-# This script will, based on subject name find the subject on Moveshelf
-# After that, the raw data (json files and optionally .csv files, see saveCsvFile boolean) in the session will be downloaded and stored locally
-# Before running the script:
-#   - Complete/check the definitions of variables myProject, mySubjectSessions, dataFolderSave and configure the boolean saveCsvFile (True or False)
-
 ## Specify the details of your data to be uploaded and where it should go
-myProject = 'internal/internal_testproject_MobileR&D'         # e.g. support/demoProject or internal/internal_testproject_MobileR&D
+myProject = 'support/demoProject'         # e.g. support/demoProject or internal/internal_testproject_MobileR&D
 
 ##
 mySubjectSessions = [
     {
-        'subjectName': 'Test_TopTreat_Selma',                # subject name, e.g. Subject1
-        'sessionNames': []                 # list of sessions (NOTE: if an empty list is provided, all sessions will be included)
+        'subjectName': 'Test_TopTreat',     # subject name, e.g. Subject1
+        'sessionNames': []                  # list of sessions (NOTE: if an empty list is provided, all sessions will be included)
     }
 ]
 
@@ -76,12 +98,12 @@ if not stopProcessing:
         if mySubject not in subjectNames:
             print('The subject you are looking for is not found, searching for: ' + mySubject)
             continue
-        
+
         mySubjectId = next(s['id'] for s in subjects if mySubject == s['name'])
         # Extract subject details
         subjectDetails = api.getSubjectDetails(mySubjectId)
         subjectName = subjectDetails['name']
-        
+
         print('Subject name: ' + subjectName)
 
         sessions = subjectDetails['sessions']
@@ -92,7 +114,7 @@ if not stopProcessing:
             if len(mySessions) == 0:
                 # empty list provided, download all sessions
                 mySessions = [s['projectPath'].split('/')[2] for s in sessions]
-        
+
             for sessionName in mySessions:
                 sessionPathToFind = subjectName + '/' + sessionName
                 if not any(sessionPathToFind in s for s in sessionNames):
@@ -101,11 +123,11 @@ if not stopProcessing:
 
                 print('Session ' + sessionName + ' found.')
                 sessionId = next(s['id'] for s in sessions if sessionPathToFind in s['projectPath'])
-                
+
                 session = api.getSessionById(sessionId)
 
                 sessionName = session['projectPath'].split('/')[2]
-                
+
                 conditions = []
                 conditions = util.getConditionsFromSession(session, conditions)
                 print('Session contains:')
@@ -147,33 +169,13 @@ if not stopProcessing:
                                 with open(filenameSave, "wb") as file:
                                     file.write(file_data)
 
-
                                 print('Downloaded ' + data['originalFileName'] + ' into ' + filenameSave)
 
                                 if saveCsvFile:
                                     filenameSaveCSV = os.path.join(filenameDirSave, os.path.splitext(data['originalFileName'])[0] + '.csv')
                                     with open(filenameSave) as f:
                                         d = json.load(f)
-                                    # auxiliary function to recursively traverse through nested dictionaries to find certain target_labels
-                                    # and extract and store the values for those target labels
-                                    def extract_values(data_dict, target_labels):
-                                        extracted_values = {label: [] for label in target_labels}
-
-                                        def traverse(d):
-                                            if isinstance(d, dict):
-                                                for key, value in d.items():
-                                                    if key in target_labels:
-                                                        extracted_values[key].append(value)
-                                                    if isinstance(value, (dict, list)):
-                                                        traverse(value)
-                                            elif isinstance(d, list):
-                                                for item in d:
-                                                    traverse(item)
-
-                                        traverse(data_dict)
-                                        return extracted_values
-
-                                    target_labels = ["time", "counts"]
+                                    target_labels = ["time", "count"]
                                     extracted_values = extract_values(d, target_labels)
                                     if not all(extracted_values[label] for label in extracted_values):
                                         print(f"Error: Could not find data for the requested labels: {target_labels}. Not writing .csv file.")
@@ -187,6 +189,3 @@ if not stopProcessing:
                                             writer.writerows(rows)
 
                                         print('Converted ' + data['originalFileName'] + ' into ' + filenameSaveCSV)
-                                    
-
-
