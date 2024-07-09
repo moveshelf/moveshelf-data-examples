@@ -35,6 +35,8 @@ _US region:_
 
 ### Example scripts
 
-The folder scripts/ contains several example scripts that show how the Moveshelf python API can be used to interact with Moveshelf. 
-Open the desired example script (eg: `download_data_example.py`) in your Python editor, follow the instructions, add all relevant information and run the script by running `python scripts/download_data_example.py` (or the example file you want to run).
+The folder scripts/ contains several example scripts that show how to interact with the Moveshelf API to access and download data from the Moveshelf platform. 
+
+#### How to run
+Open the desired example script (e.g., `download_data_example.py` or `access_trial_json_data.py`) in your Python editor, follow the instructions, add all relevant information and run the script by running `python scripts/download_data_example.py` (or the example file you want to run).
 
