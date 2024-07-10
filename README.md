@@ -33,6 +33,10 @@ _US region:_
 * staging: "https://api.us.staging.moveshelf.com/graphql"
 * production: "https://api.us.moveshelf.com/graphql"
 
-### Running the script
+### Example scripts
 
-Open the desired example script (eg: `download_data_example.py`) in your Python editor, follow the instructions, add all relevant information and run the script by running `python scripts/download_data_example.py` (or the example file you want to run).
+The folder scripts/ contains several example scripts that show how to interact with the Moveshelf API to access and download data from the Moveshelf platform. 
+
+#### How to run
+Open the desired example script (e.g., `download_data_example.py` or `access_trial_json_data.py`) in your Python editor, follow the instructions, add all relevant information and run the script by running `python scripts/download_data_example.py` (or the example file you want to run).
+
