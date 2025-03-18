@@ -24,14 +24,9 @@ To access the Moveshelf API an access key should be created:
 ### Configure API environment
 Open `mvshlf-config.json` and adjust "apiUrl" for:
 
-_EU region:_
-* staging: "https://api.staging.moveshelf.com/graphql"
-* production: "https://api.moveshelf.com/graphql"
+_EU region:_ "https://api.moveshelf.com/graphql"
 
-
-_US region:_
-* staging: "https://api.us.staging.moveshelf.com/graphql"
-* production: "https://api.us.moveshelf.com/graphql"
+_US region:_ "https://api.us.moveshelf.com/graphql"
 
 ### Example scripts
 
