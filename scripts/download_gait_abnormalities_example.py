@@ -9,10 +9,10 @@ sys.path.append(parent_folder)
 # This script extracts all the gait abnormalities of all sessions of all
 # subjects within a project, and saves each gait abnormality dictionary
 # in a file called "gaitAbnormalities_<subjectID>_<sessionDate>_<clinicianID>.json".
-# Specify the project you want to extract the gait evaluations
-# from. 
+ 
 ## General configuration. Set values before running the script
-my_project = "<organizationName/projectName>"  # e.g. support/demoProject
+# Specify the project you want to extract the gait evaluations from.
+my_project = "<organizationName/projectName>"  # e.g. "internal/internal_testproject_GAIT.SCRIPT"
 
 # Specify the IDs of the clinicians that performed the evaluations you want to
 # extract.
@@ -20,6 +20,8 @@ my_project = "<organizationName/projectName>"  # e.g. support/demoProject
 clinician_ids = ["<clinician_id1>", "<clinician_id2>"]
 
 dataFolderSave = r'C:\Temp\1'   # data folder where data should be saved
+# Ensure the folder exists
+os.makedirs(dataFolderSave, exist_ok=True)
 
 ## Setup the API
 # Load config
@@ -61,7 +63,7 @@ for subject in subjects:
         
         session = api.getSessionById(session_id)
         session_metadata = session.get("metadata", None)
-        gait_evaluations = session_metadata.get('gaitScriptEvaluation', {}) if session_metadata else {}
+        gait_evaluations = json.loads(session_metadata).get('gaitScriptEvaluation', {}) if session_metadata else {}
 
 
         # Loop over all gait evaluations and exclude the ids that are not in the list
