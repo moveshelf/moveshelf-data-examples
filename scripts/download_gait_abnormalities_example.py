@@ -19,7 +19,7 @@ my_project = "<organizationName/projectName>"  # e.g. "internal/internal_testpro
 # Note: an empty list will extract all evaluations.
 clinician_ids = ["<clinician_id1>", "<clinician_id2>"]
 
-dataFolderSave = r'C:\Temp\1'   # data folder where data should be saved
+dataFolderSave = "C:/Temp/annotations_export"   # data folder where data should be saved
 # Ensure the folder exists
 os.makedirs(dataFolderSave, exist_ok=True)
 
@@ -51,6 +51,7 @@ my_project_id = projects[idx_my_project]["id"]
 subjects = api.getProjectSubjects(my_project_id)
 for subject in subjects:
     subject_id = subject["id"]
+    subject_name = subject["name"]
     subject_details = api.getSubjectDetails(subject_id)
     ## Get sessions
     sessions = subject_details.get("sessions", [])
@@ -60,7 +61,7 @@ for subject in subjects:
             session_name = session['projectPath'].split('/')[2]
         except:
             session_name = ""
-        
+
         session = api.getSessionById(session_id)
         session_metadata = session.get("metadata", None)
         gait_evaluations = json.loads(session_metadata).get('gaitScriptEvaluation', {}) if session_metadata else {}
@@ -70,9 +71,8 @@ for subject in subjects:
         # of clinician ids
         for gait_evaluation in gait_evaluations:
             if len(clinician_ids) == 0 or gait_evaluation['id'] in clinician_ids:
-                file_name = f"gaitAbnormalities_{subject_id}_{session_name}_{gait_evaluation['id']}.json"
                 gait_abnormalities = gait_evaluation.get('state', {}).get('gaitAbnormalities', {})
-                
+                file_name = f"gaitAbnormalities_{subject_name}_{session_name}_{gait_evaluation['id']}.json"
                 print(f'Writing to file: {file_name}')
                 with open(os.path.join(dataFolderSave, file_name), 'w') as f:
                     json.dump(gait_abnormalities, f, indent=2)
