@@ -1,3 +1,6 @@
+# Copyright (c) 2025 Moveshelf
+# See LICENSE file for details. 
+
 # install required packages: pip install -r ../requirements.txt
 import os, sys, json, csv
 parentFolder = os.path.dirname(os.path.dirname(__file__))

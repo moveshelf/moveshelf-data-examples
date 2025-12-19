@@ -1,3 +1,6 @@
+# Copyright (c) 2025 Moveshelf
+# See LICENSE file for details. 
+
 from moveshelf_api.api import MoveshelfApi
 import os
 import sys
