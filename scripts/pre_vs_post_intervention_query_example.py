@@ -133,13 +133,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 query_projects_in_parallel = False # If True, use multithreading to query multiple projects in parallel
 
-PROJECT_NAMES = ['internal/test_queries_for_research_2', 'internal/test_queries_for_research_3']  # List of project names to query
+PROJECT_NAMES = ['<organizationName/projectName1>', '<organizationName/projectName2>']  # List of project names to query
 
 DEFAULT_CELL_VALUE = "" # If a field is not found, assign ""
 CONTEXT_LABELS = ["Left", "Right"] # Labels used for context-specific parameters (e.g., left/right)
 
-DATA_SPREADSHEET_FILENAME = 'Data Export - Hamstring length study.xlsx'
-INTERVENTION_DATA_SPREADSHEET_FILENAME = 'Intervention Data Export - Hamstring length study.xlsx'
+DATA_SPREADSHEET_FILENAME = 'Data Export - Pre vs post intervention study.xlsx'
+INTERVENTION_DATA_SPREADSHEET_FILENAME = 'Intervention Data Export - Pre vs post intervention study.xlsx'
 
 # Excel formatting constants
 MAX_COLUMN_WIDTH = 50
