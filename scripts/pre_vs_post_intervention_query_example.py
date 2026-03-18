@@ -279,10 +279,10 @@ PRE_POST_SUFFIXES = [" - Pre", " - Post"] # Suffixes to add to column names if p
 ## HELPER FUNCTIONS
 ## ============================================================================
 
-def download_with_session(url):
+def download_with_session(url: str) -> dict | None:
     return download_json_file(url, session=requests_session)
 
-def download_json_file(url: str, session=None) -> dict | None:
+def download_json_file(url: str, session: requests.Session | None = None) -> dict | None:
     """
     Downloads and parses a JSON file from a URL.
     
