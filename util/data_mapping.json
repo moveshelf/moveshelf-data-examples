@@ -1,0 +1,311 @@
+[
+	{
+		"title": "Pelvic tilt left",
+		"id": "kinematics-pelvic-tilt-left",
+		"trackNames": [
+			"pelvictil",
+			"pelvisangles-x",
+			"pelvisangle-x"
+		],
+		"gaitFeatures": [
+			"knee-phase-EST-EST",
+			"knee-phase-LST-LST"
+		],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Pelvic tilt right",
+		"id": "kinematics-pelvic-tilt-right",
+		"trackNames": [
+			"pelvictil",
+			"pelvisangles-x",
+			"pelvisangle-x"
+		],
+		"gaitFeatures": [
+			"knee-phase-EST-EST",
+			"knee-phase-LST-LST"
+		],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Pelvic obliquity left",
+		"id": "kinematics-pelvic-obliquity-left",
+		"trackNames": [
+			"pelvicobl",
+			"pelvisangles-y",
+			"pelvisangle-y"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Pelvic obliquity right",
+		"id": "kinematics-pelvic-obliquity-right",
+		"trackNames": [
+			"pelvicobl",
+			"pelvisangles-y",
+			"pelvisangle-y"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Pelvic rotation left",
+		"id": "kinematics-pelvic-rotation-left",
+		"trackNames": [
+			"pelvicrot",
+			"pelvisangles-z",
+			"pelvisangle-z"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Pelvic rotation right",
+		"id": "kinematics-pelvic-rotation-right",
+		"trackNames": [
+			"pelvicrot",
+			"pelvisangles-z",
+			"pelvisangle-z"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Hip flexion/extension left",
+		"id": "kinematics-hip-flexion-left",
+		"trackNames": [
+			"hipangles-x",
+			"hangle-x",
+			"hipflex",
+			"hipangle-x"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Hip flexion/extension right",
+		"id": "kinematics-hip-flexion-right",
+		"trackNames": [
+			"hipangles-x",
+			"hangle-x",
+			"hipflex",
+			"hipangle-x"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Hip ab/adduction left",
+		"id": "kinematics-hip-adduction-left",
+		"trackNames": [
+			"hipangles-y",
+			"hangle-y",
+			"hipabad",
+			"hipangle-y"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Hip ab/adduction right",
+		"id": "kinematics-hip-adduction-right",
+		"trackNames": [
+			"hipangles-y",
+			"hangle-y",
+			"hipabad",
+			"hipangle-y",
+			"hipangle-y"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Hip rotation left",
+		"id": "kinematics-hip-rotation-left",
+		"trackNames": [
+			"hipangles-z",
+			"hangle-z",
+			"hiprot",
+			"hipangle-z"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Hip rotation right",
+		"id": "kinematics-hip-rotation-right",
+		"trackNames": [
+			"hipangles-z",
+			"hangle-z",
+			"hiprot",
+			"hipangle-z"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Knee flexion/extension left",
+		"id": "kinematics-knee-flexion-left",
+		"trackNames": [
+			"kneeangles-x",
+			"kangle-x",
+			"kneeflex",
+			"kneeangle-x"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Knee flexion/extension right",
+		"id": "kinematics-knee-flexion-right",
+		"trackNames": [
+			"kneeangles-x",
+			"kangle-x",
+			"kneeflex",
+			"kneeangle-x"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Knee adduction left",
+		"id": "kinematics-knee-adduction-left",
+		"trackNames": [
+			"kneeangles-y",
+			"kangle-y",
+			"kneeabad",
+			"kneeangle-y"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Knee adduction right",
+		"id": "kinematics-knee-adduction-right",
+		"trackNames": [
+			"kneeangles-y",
+			"kangle-y",
+			"kneeabad",
+			"kneeangle-y"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Knee rotation left",
+		"id": "kinematics-knee-rotation-left",
+		"trackNames": [
+			"kneeangles-z",
+			"kangle-z",
+			"kneerot",
+			"kneeangle-z"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Knee rotation right",
+		"id": "kinematics-knee-rotation-right",
+		"trackNames": [
+			"kneeangles-z",
+			"kangle-z",
+			"kneerot",
+			"kneeangle-z"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Ankle dorsi/plantar left",
+		"id": "kinematics-ankle-dorsiflexion-left",
+		"trackNames": [
+			"ankleangles-x",
+			"aangle-x",
+			"ankleflex",
+			"ankleangle-x"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Ankle dorsi/plantar right",
+		"id": "kinematics-ankle-dorsiflexion-right",
+		"trackNames": [
+			"ankleangles-x",
+			"aangle-x",
+			"ankleflex",
+			"ankleangle-x"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Ankle ab/adduction left",
+		"id": "kinematics-ankle-adduction-left",
+		"trackNames": [
+			"ankleangles-y",
+			"aangle-y",
+			"anklepron",
+			"ankleangle-y"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Ankle ab/adduction right",
+		"id": "kinematics-ankle-adduction-right",
+		"trackNames": [
+			"ankleangles-y",
+			"aangle-y",
+			"anklepron",
+			"ankleangle-y"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Ankle rotation left",
+		"id": "kinematics-ankle-rotation-left",
+		"trackNames": [
+			"ankleangles-z",
+			"aangle-z",
+			"anklerot",
+			"ankleangle-z"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Ankle rotation right",
+		"id": "kinematics-ankle-rotation-right",
+		"trackNames": [
+			"ankleangles-z",
+			"aangle-z",
+			"anklerot",
+			"ankleangle-z"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Foot progression angle left",
+		"id": "kinematics-foot-progression-",
+		"trackNames": [
+			"footprogressangles-z",
+			"footprogressionrot"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	},
+	{
+		"title": "Foot progression angle right",
+		"id": "kinematics-foot-progression-right",
+		"trackNames": [
+			"footprogressangles-z",
+			"footprogressionrot"
+		],
+		"gaitFeatures": [],
+		"chartType": "Kinematics"
+	}
+]
