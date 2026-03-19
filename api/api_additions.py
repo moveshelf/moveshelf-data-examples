@@ -195,3 +195,74 @@ class MoveshelfApiCustomized(MoveshelfApi):
         )
         return data['node']
     
+    def getProjectSubjectIds(self, project_id):      
+        data = self._dispatch_graphql(
+            '''
+            query getProjectPatients($projectId: ID!) {
+                node(id: $projectId) {
+                    ... on Project {
+                        id,
+                        name,
+                        description,
+                        canEdit,
+                        patients {
+                            id
+                            name
+                        }
+                    }
+                }
+            }
+            ''',
+            projectId = project_id
+        )
+        return data['node']['patients']
+    
+    def getProjectSubjectsWithClips(self, project_id):
+        data = self._dispatch_graphql(
+            '''
+            query getProjectPatients($projectId: ID!) {
+                node(id: $projectId) {
+                    ... on Project {
+                        id,
+                        name,
+                        description,
+                        canEdit,
+                        patients {
+                            id
+                            name
+                            metadata
+                            sessions {
+                                id
+                                date
+                                projectPath
+                                metadata
+                                clips {
+                                    id
+                                    title
+                                    created
+                                    projectPath
+                                    uploadStatus
+                                    hasCharts
+                                }
+                                norms {
+                                    id
+                                    name
+                                    uploadStatus
+                                    projectPath
+                                    clips {
+                                        id
+                                        title
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ''',
+            projectId = project_id
+        )
+        return data['node']['patients']
+    
+    
+    
