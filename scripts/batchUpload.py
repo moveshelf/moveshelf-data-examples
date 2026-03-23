@@ -7,7 +7,7 @@ parentFolder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parentFolder)
 
 from moveshelf_api import util
-from api.api import MoveshelfApiCustomized
+from api.api_additions import MoveshelfApiCustomized
 import urllib3
 
 '''

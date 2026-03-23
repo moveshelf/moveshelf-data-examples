@@ -195,3 +195,42 @@ class MoveshelfApiCustomized(MoveshelfApi):
         )
         return data['node']
     
+    def getSessionClips(self, session_id):
+        """
+        Retrieve all clips from a session by its ID.
+
+        Args:
+            session_id (str): The ID of the session to retrieve.
+
+        Returns:
+            list: A list of reports associated with the session.
+        """
+        data = self._dispatch_graphql(
+            '''
+            query getSession($sessionId: ID!) {
+                node(id: $sessionId) {
+                    ... on Session {
+                        id,
+                        projectPath,
+                        clips {
+                            id
+                            title
+                            created
+                            projectPath
+                            uploadStatus
+                            hasCharts
+                            additionalData (dataTypeFilter: ["data"]){
+                                id
+                                dataType
+                                uploadStatus
+                                originalFileName
+                                originalDataDownloadUri
+                            }
+                        }
+                    }
+                }
+            }
+            ''',
+            sessionId=session_id
+        )
+        return data['node']['clips']
