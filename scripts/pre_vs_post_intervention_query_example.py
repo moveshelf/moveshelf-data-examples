@@ -22,8 +22,10 @@ from datetime import datetime
 
 
 # Use a requests.Session for connection pooling
+MAX_WORKERS = 5 # Number of threads for parallel processing.
+POOL_MAXSIZE = MAX_WORKERS + 2  # Set pool maxsize slightly higher than max workers to avoid connection issues
 requests_session = requests.Session()
-adapter = requests.adapters.HTTPAdapter(pool_maxsize=35)
+adapter = requests.adapters.HTTPAdapter(pool_maxsize=POOL_MAXSIZE)
 requests_session.mount('https://', adapter)
 
 # Setup logging
@@ -883,7 +885,7 @@ def process_subjects(subjects, api):
 
     # First retrieve subjects with clips containing json data
     # Parallel retrieval of subject data
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         subjects_with_clips = list(executor.map(api.getSubjectData, unique_subject_ids))
 
     # Get required clip data sources dynamically
@@ -903,7 +905,7 @@ def process_subjects(subjects, api):
                         file_paths.append(f'{c["projectPath"]}{c["title"]}/{ad["originalFileName"]}')
 
     # Download all JSON files in parallel
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         all_jsons = list(executor.map(download_with_session, URLs))
     
     # repeat session filtering (step 2) to get session pairs with clips after retrieving clip data
@@ -1423,8 +1425,8 @@ def main():
         timeout=custom_timeout,
     )
 
-    # Increase connection pool size globally for urllib3 to match max 32 thread workers
-    api.http.connection_pool_kw['maxsize'] = 35
+    # Increase connection pool size globally for urllib3 to match MAX_WORKERS thread workers
+    api.http.connection_pool_kw['maxsize'] = POOL_MAXSIZE
 
     projects = api.getUserProjects()    
     project_names = [project['name'] for project in projects]
@@ -1448,13 +1450,13 @@ def main():
 
         # Query all subjects in parallel
         logging.info('Extracting filtered subjects (without data files), optionally filtered by session date, from projects in parallel: %s', PROJECT_NAMES)
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             subjects_in_parallel = list(executor.map(api.getFilteredProjectSubjects, list_of_project_ids, [subject_metadata_filters]*len(list_of_project_ids), [session_filters]*len(list_of_project_ids), [False]*len(list_of_project_ids)))
         logging.info('Total number of subjects retrieved from all projects: %d', sum(len(project_subjects) for project_subjects in subjects_in_parallel))
 
         # Process subjects in parallel using ThreadPoolExecutor
         logging.info('Processing subjects in parallel to extract session-pairs...')
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             results = list(executor.map(process_subjects, subjects_in_parallel, [api]*len(subjects_in_parallel)))
         logging.info('Data extraction completed for all subjects. Combining results and exporting to Excel.')
 
