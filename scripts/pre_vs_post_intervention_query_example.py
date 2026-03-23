@@ -23,6 +23,9 @@ from datetime import datetime
 
 # Use a requests.Session for connection pooling
 requests_session = requests.Session()
+adapter = requests.adapters.HTTPAdapter(pool_maxsize=35)
+requests_session.mount('https://', adapter)
+
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -1419,6 +1422,9 @@ def main():
         api_url=data["apiUrl"],
         timeout=custom_timeout,
     )
+
+    # Increase connection pool size globally for urllib3 to match max 32 thread workers
+    api.http.connection_pool_kw['maxsize'] = 35
 
     projects = api.getUserProjects()    
     project_names = [project['name'] for project in projects]
