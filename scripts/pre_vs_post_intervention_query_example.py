@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Any
 from collections import Counter
-from matplotlib.dates import relativedelta
+from dateutil.relativedelta import relativedelta
 import numpy as np
 import pandas as pd
 import requests
@@ -635,7 +635,10 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
                         all_jsons.append(readable_data)
                         file_paths.append(file_path)
                     
-                    channel_labels = [channel['label'] for channel in data_channels]
+                    if criterion.get("source", "") == "gait_params" and criterion.get("has_context", False):
+                        channel_labels = [channel['context'] + channel['label'] for channel in data_channels]
+                    else:
+                        channel_labels = [channel['label'] for channel in data_channels]
                     
                     # Process only matching columns for this criterion
                     for clip_data_column in matching_columns:
@@ -783,7 +786,7 @@ def append_clip_data_to_row(clip_params, data_columns, data, pre_post: str, all_
     for source, items in clip_params.items():
         clip_data_columns = []
         for param_to_export in items:
-            if param_to_export.get("has_context", False) and not source == "gait_params":
+            if param_to_export.get("has_context", False):
                 clip_data_columns.append({
                     "channel_name": f'Left{param_to_export.get("label")}',
                     "value": [],
