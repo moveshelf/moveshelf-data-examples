@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Any
 from collections import Counter
-from matplotlib.dates import relativedelta
+from dateutil.relativedelta import relativedelta
 import numpy as np
 import pandas as pd
 import requests
