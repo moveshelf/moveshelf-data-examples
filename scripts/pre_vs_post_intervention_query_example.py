@@ -160,6 +160,8 @@ MAX_ROWS_FOR_WIDTH_CALC = 100
 # - source: name of the source where the parameter is stored (e.g., name, subject_metadata, session_metadata, angles_normalized, lengths_velocities_normalized, gait_params)
 # - label: name of the label (e.g. metadata key) in the source (not needed if source is "name" or "date")
 # - processing: for clip level parameters, specify if the value should be taken at the start, average, or max of the signal. None if no processing is needed (e.g., for gait_params)
+#      Available options: "start", "average", "max", "min", "start_single_support", "average_single_support", "max_single_support", "min_single_support", "start_double_support","average_double_support", "max_double_support", "min_double_support", "start_stance","average_stance", "max_stance", "min_stance", "start_swing", "average_swing", "max_swing", "min_swing", None
+# - needs_events: True if the parameter requires event information to be processed (e.g., to extract values at specific gait phases), False otherwise
 # - has_context: True if the parameter has context (e.g., left/right), False otherwise    
 PARAMS_TO_EXPORT = [
     # Subject-level
@@ -181,10 +183,14 @@ PARAMS_TO_EXPORT = [
     # Clip-level parameters (only for clips with conditions in CONDITION_TARGET_NAMES)
     {"column_name": "Knee Angle at Initial Contact", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"start", "has_context": True},
     {"column_name": "Peak knee extension in gait cycle", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"max", "has_context": True},
+    {"column_name": "Average knee extension in stance phase", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"average_stance", "needs_events": True, "has_context": True},
+    {"column_name": "Peak knee extension in single support phase", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"max_single_support", "needs_events": True, "has_context": True},
+    {"column_name": "Min knee extension in swing phase", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"min_swing", "needs_events": True, "has_context": True},
+    {"column_name": "Peak knee extension in double support phase", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"max_double_support", "needs_events": True, "has_context": True},
     {"column_name": "Peak Ankle Dorsiflexion in gait cycle", "level": "clip", "source": "angles_normalized", "label": "DorsiPlanFlex",  "processing":"max", "has_context": True},
     {"column_name": "Medial Hamstring length at Initial Contact", "level": "clip", "source": "lengths_velocities_normalized", "label": "MedHamstringLength",  "processing":"start", "has_context": True},
     {"column_name": "Peak Medial Hamstring velocity in gait cycle", "level": "clip", "source": "lengths_velocities_normalized", "label": "MedHamstringVelocity",  "processing":"max", "has_context": True},
-    {"column_name": "Walking speed", "level": "clip", "source": "gait_params", "label": "Speed",  "processing": None,  "has_context": False},
+    {"column_name": "Walking speed", "level": "clip", "source": "gait_params", "label": "Speed",  "processing": None,  "has_context": True},
 ]
 
 # Define parameters that should be exported to INTERVENTION_DATA_SPREADSHEET_FILENAME.
@@ -398,6 +404,8 @@ def get_clip_data_sources(params_to_export: list[dict[str, Any]] | None = None, 
                 source = param.get("source")
                 if source:  # Only add non-empty sources
                     sources.add(source)
+                if param.get("needs_events", False):
+                    sources.add("event")  # Add "event" source if any parameter needs events
     
     # Extract from inclusion_criteria
     if inclusion_criteria is not None:
@@ -406,6 +414,8 @@ def get_clip_data_sources(params_to_export: list[dict[str, Any]] | None = None, 
                 source = criterion.get("source")
                 if source:  # Only add non-empty sources
                     sources.add(source)
+                if criterion.get("needs_events", False):
+                    sources.add("event")  # Add "event" source if any criterion needs events
     
     return sources
 
@@ -612,6 +622,22 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
         for clip in condition_clips:
             additional_data = clip.get('additionalData', [])
             file_found = False
+            # Retrieve event.json if the criterion has needs_events=True
+            if criterion.get("needs_events", False):
+                for ad in additional_data:
+                    if ad['dataType'] == "event":
+                        file_path = f'{clip["projectPath"]}{clip["title"]}/{ad["originalFileName"]}'
+                        if file_path in file_paths:
+                            current_index = file_paths.index(file_path)
+                            events_data = all_jsons[current_index].get('events', [])
+                        else:
+                            file_data = requests_session.get(ad['originalDataDownloadUri']).content
+                            readable_data = json.loads(file_data.decode())
+                            events_data = readable_data.get('events', [])
+                            all_jsons.append(readable_data)
+                            file_paths.append(file_path)
+                        break
+                    
             
             for ad in additional_data:
                 filename, _ = os.path.splitext(ad['originalFileName'])
@@ -627,7 +653,7 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
                     # First check if we have already downloaded this file
                     if file_path in file_paths:
                         current_index = file_paths.index(file_path)
-                        data_channels = all_jsons[current_index]['data']
+                        data_channels = all_jsons[current_index].get('data', [])
                     else:
                         file_data = requests_session.get(ad['originalDataDownloadUri']).content
                         readable_data = json.loads(file_data.decode())
@@ -650,20 +676,26 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
                             else:
                                 my_signal = [value[clip_file] for value in data_channels[channel_idx]['values']]
                             
-                            match criterion_processing:
-                                case "start":
-                                    value = my_signal[0]
-                                case "average":
-                                    value = sum(my_signal) / len(my_signal)
-                                case "max":
-                                    value = max(my_signal)
-                                case None:
-                                    value = my_signal
-                                case "single_stance":
-                                    # TODO: implement single stance average
-                                    value = DEFAULT_CELL_VALUE
-                                case _:
-                                    value = DEFAULT_CELL_VALUE
+                            # If the criterion needs events, we need to segment my_signal based on the events and the specified processing
+                            if criterion.get("needs_events", False):
+                                signal_context = "Left" if label_key.startswith("Left") else "Right"
+                                my_signal = segment_signal_based_on_events(my_signal, signal_context, events_data, criterion_processing)
+
+                            if not my_signal:
+                                value = DEFAULT_CELL_VALUE
+                            elif criterion_processing is None:
+                                value = my_signal
+                            elif "start" in criterion_processing:
+                                value = my_signal[0]
+                            elif "average" in criterion_processing:
+                                value = sum(my_signal) / len(my_signal)
+                            elif "max" in criterion_processing:
+                                value = max(my_signal)
+                            elif "min" in criterion_processing:
+                                value = min(my_signal)
+                            else:
+                                value = DEFAULT_CELL_VALUE
+
                             clip_data_column["value"].append(value)
                     break  # Found the file for this clip, move to next clip
             
@@ -694,6 +726,101 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
             clip_data_columns[idx]["value"] = DEFAULT_CELL_VALUE
     
     return clip_data_columns
+
+def segment_signal_based_on_events(signal: list, signal_context: str, events_data: list, criterion_processing: str):
+    """
+    Segments the input signal based on events and the specified processing criterion.
+    Args:
+        signal: The input signal to be segmented (list of values).
+        signal_context: Side that needs to be considered (e.g., "Left", "Right").
+        events_data: List of event dictionaries with keys 'name', 'opposite', 'context', and 'perc'.
+        criterion_processing: The processing criterion that specifies how to segment (e.g., "max_stance").
+    Returns:
+        The segmented signal based on the events and processing criterion. Returns an empty list if the gait phase cannot be extracted due to missing events or other issues.
+    """
+    if not signal:
+        return []
+    
+    # Find the relevant events for this cycle and context
+    foot_off_perc = None
+    opposite_foot_off_perc = None
+    opposite_foot_strike_perc = None
+    
+    for event in events_data:
+        event_name = event.get('name', '')
+        event_context = event.get('context', '')
+        event_perc = event.get('perc', None)
+        event_opposite = event.get('opposite')
+        
+        if event_perc is None or event_context != signal_context:
+            continue
+            
+        # Find Foot Off for the same context
+        if event_name == 'Foot Off' and not event_opposite:
+            foot_off_perc = event_perc
+        
+        # Find opposite foot events for single/double support phases
+        if event_opposite:
+            if event_name == 'Foot Off':
+                opposite_foot_off_perc = event_perc
+            elif event_name == 'Foot Strike':
+                opposite_foot_strike_perc = event_perc
+    
+    # Determine phase range based on criterion_processing
+    start_idx = 0
+    end_idx = len(signal) - 1
+    
+    if "stance" in criterion_processing:
+        # Stance phase: from Foot Strike (0%) to Foot Off
+        if foot_off_perc is not None:
+            end_idx = min(int(foot_off_perc), len(signal) - 1)
+        else:
+            # If no Foot Off event found, return empty signal
+            return []
+    
+    elif "swing" in criterion_processing:
+        # Swing phase: from Foot Off to next Foot Strike (100%)
+        if foot_off_perc is not None:
+            start_idx = min(int(foot_off_perc), len(signal) - 1)
+        else:
+            # If no Foot Off event found, return empty signal
+            return []
+    
+    elif "single_support" in criterion_processing:
+        # Single support: when opposite foot is off the ground
+        # From opposite Foot Off to opposite Foot Strike
+        if opposite_foot_off_perc is not None and opposite_foot_strike_perc is not None:
+            start_idx = min(int(opposite_foot_off_perc), len(signal) - 1)
+            end_idx = min(int(opposite_foot_strike_perc), len(signal) - 1)
+        else:
+            # If events not found, return empty signal
+            return []
+    
+    elif "double_support" in criterion_processing:
+        # Double support: when both feet are on the ground
+        # There are two double support periods in a gait cycle
+        # Initial double support: from Foot Strike (0%) to opposite Foot Off
+        # Terminal double support: from opposite Foot Strike to Foot Off
+        # We concatenate both periods if the relevant events are found
+
+        if foot_off_perc is not None:
+            if opposite_foot_off_perc is not None and opposite_foot_strike_perc is not None:
+                double_support_signal = []
+                # Initial double support
+                initial_end_idx = min(int(opposite_foot_off_perc), len(signal) - 1)
+                double_support_signal.extend(signal[0:initial_end_idx + 1])
+                # Terminal double support
+                terminal_start_idx = min(int(opposite_foot_strike_perc), len(signal) - 1)
+                foot_off_idx = min(int(foot_off_perc), len(signal) - 1)
+                double_support_signal.extend(signal[terminal_start_idx:foot_off_idx + 1])
+                return double_support_signal
+        else:
+            # If opposite foot events not found, return empty signal
+            return []
+    
+    # Return the segmented signal
+    return signal[start_idx:end_idx + 1]   
+
 
 def append_metadata_to_row(params_to_export, data_columns, data, level, source, pre_post: str = "", date_of_birth: str = ""):
     """
