@@ -113,19 +113,18 @@ if not stopProcessing:
         if len(sessions) == 0:
             print('No sessions found')
         else:
-            sessionNames = [s['projectPath'] for s in sessions]
+            sessionNames = [s['projectPath'].split('/')[2] for s in sessions]
             if len(mySessions) == 0:
                 # empty list provided, download all sessions
-                mySessions = [s['projectPath'].split('/')[2] for s in sessions]
+                mySessions = sessionNames
 
             for sessionName in mySessions:
-                sessionPathToFind = subjectName + '/' + sessionName
-                if not any(sessionPathToFind in s for s in sessionNames):
+                if not any(sessionName in s for s in sessionNames):
                     print('Session ' + sessionName + ' not found, skipping and moving to next.')
                     continue
 
                 print('Session ' + sessionName + ' found.')
-                sessionId = next(s['id'] for s in sessions if sessionPathToFind in s['projectPath'])
+                sessionId = next(s['id'] for s in sessions if sessionName in s['projectPath'])
 
                 session = api.getSessionById(sessionId)
 
@@ -168,14 +167,15 @@ if not stopProcessing:
                                 filenameDirSave = re.sub(r'[*?"<>|]',"",filenameDirSave)        # remove "bad" characters from path
                                 if not os.path.isdir(filenameDirSave):
                                     os.makedirs(filenameDirSave)
-                                filenameSave = os.path.join(filenameDirSave, data['originalFileName'])
+                                sanitizedFilename = re.sub(r'[*?"<>|]',"", data['originalFileName'])
+                                filenameSave = os.path.join(filenameDirSave, sanitizedFilename)
                                 with open(filenameSave, "wb") as file:
                                     file.write(file_data)
 
                                 print('Downloaded ' + data['originalFileName'] + ' into ' + filenameSave)
 
                                 if saveCsvFile:
-                                    filenameSaveCSV = os.path.join(filenameDirSave, os.path.splitext(data['originalFileName'])[0] + '.csv')
+                                    filenameSaveCSV = os.path.join(filenameDirSave, os.path.splitext(sanitizedFilename)[0] + '.csv')
                                     with open(filenameSave) as f:
                                         d = json.load(f)
                                     target_labels = ["time", "count"]
