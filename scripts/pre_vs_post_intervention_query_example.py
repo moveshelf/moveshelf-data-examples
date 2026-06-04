@@ -757,14 +757,14 @@ def segment_signal_based_on_events(signal: list, signal_context: str, events_dat
             
         # Find Foot Off for the same context
         if event_name == 'Foot Off' and not event_opposite:
-            foot_off_perc = event_perc
+            foot_off_perc = int(event_perc)
         
         # Find opposite foot events for single/double support phases
         if event_opposite:
             if event_name == 'Foot Off':
-                opposite_foot_off_perc = event_perc
+                opposite_foot_off_perc = int(event_perc)
             elif event_name == 'Foot Strike':
-                opposite_foot_strike_perc = event_perc
+                opposite_foot_strike_perc = int(event_perc)
     
     # Determine phase range based on criterion_processing
     start_idx = 0
@@ -773,7 +773,7 @@ def segment_signal_based_on_events(signal: list, signal_context: str, events_dat
     if "stance" in criterion_processing:
         # Stance phase: from Foot Strike (0%) to Foot Off
         if foot_off_perc is not None:
-            end_idx = min(int(foot_off_perc), len(signal) - 1)
+            end_idx = min(foot_off_perc, len(signal) - 1)
         else:
             # If no Foot Off event found, return empty signal
             return []
@@ -781,7 +781,7 @@ def segment_signal_based_on_events(signal: list, signal_context: str, events_dat
     elif "swing" in criterion_processing:
         # Swing phase: from Foot Off to next Foot Strike (100%)
         if foot_off_perc is not None:
-            start_idx = min(int(foot_off_perc), len(signal) - 1)
+            start_idx = min(foot_off_perc, len(signal) - 1)
         else:
             # If no Foot Off event found, return empty signal
             return []
@@ -790,8 +790,8 @@ def segment_signal_based_on_events(signal: list, signal_context: str, events_dat
         # Single support: when opposite foot is off the ground
         # From opposite Foot Off to opposite Foot Strike
         if opposite_foot_off_perc is not None and opposite_foot_strike_perc is not None:
-            start_idx = min(int(opposite_foot_off_perc), len(signal) - 1)
-            end_idx = min(int(opposite_foot_strike_perc), len(signal) - 1)
+            start_idx = min(opposite_foot_off_perc, len(signal) - 1)
+            end_idx = min(opposite_foot_strike_perc, len(signal) - 1)
         else:
             # If events not found, return empty signal
             return []
@@ -807,11 +807,11 @@ def segment_signal_based_on_events(signal: list, signal_context: str, events_dat
             if opposite_foot_off_perc is not None and opposite_foot_strike_perc is not None:
                 double_support_signal = []
                 # Initial double support
-                initial_end_idx = min(int(opposite_foot_off_perc), len(signal) - 1)
+                initial_end_idx = min(opposite_foot_off_perc, len(signal) - 1)
                 double_support_signal.extend(signal[0:initial_end_idx + 1])
                 # Terminal double support
-                terminal_start_idx = min(int(opposite_foot_strike_perc), len(signal) - 1)
-                foot_off_idx = min(int(foot_off_perc), len(signal) - 1)
+                terminal_start_idx = min(opposite_foot_strike_perc, len(signal) - 1)
+                foot_off_idx = min(foot_off_perc, len(signal) - 1)
                 double_support_signal.extend(signal[terminal_start_idx:foot_off_idx + 1])
                 return double_support_signal
         else:
