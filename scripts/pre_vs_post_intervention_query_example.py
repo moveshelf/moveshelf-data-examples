@@ -68,12 +68,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 #
 # 3. LOCAL FILTERING - LAYER 2 (Session Level and interventions):
 #    - Applied using `INCLUSION_CRITERIA` with level="session" and `INTERVENTION_CRITERIA`
-#    - Identifies valid consecutive session pairs (pre/post) based on:
+#    - Identifies valid consecutive session pairs (pre/post intervention) based on:
 #      a. Time constraints: sessions must be MIN_MONTHS_BETWEEN_SESSIONS apart
 #      b. Intervention criteria: filters by procedures between sessions using INTERVENTION_CRITERIA
 #      c. Session metadata: validates session-specific metadata (e.g., popliteal angle)
 #    - Assigns subjects to intervention groups (e.g., "MHL", "MLHL", "Control") based on
-#      procedures performed between the pre and post sessions. Control group includes subjects without qualifying procedures 
+#      procedures performed between the pre and post intervention sessions. Control group includes subjects without qualifying procedures 
 #      in between sessions.
 #    - Exclusion criteria can remove subjects with unwanted procedures
 #
@@ -127,8 +127,22 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # - CONDITION_TARGET_NAMES: Specify which trial conditions to analyze (or [] for all)
 # - Date ranges, time windows, and other constraints
 #
-## CURRENT LIMITATIONS:
-# - Single support average processing for kinematic data is not yet implemented
+## CYCLE HANDLING:
+#
+# The script automatically handles different Moveshelf project configurations regarding gait cycle segmentation, ensuring that parameters are extracted correctly regardless of how cycles are defined:
+#
+# 1. Projects using GCD files (canProcessGCDFiles=True):
+#    - Each file contains a single gait cycle
+#    - Cycle is identified by extracting the filename from <<<filename>>> pattern
+#    - Kinematic data is keyed by this extracted filename
+#
+# 2. Projects not using GCD files (canProcessGCDFiles=False):
+#    - Each file can contain multiple gait cycles
+#    - Cycles are keyed as 'cycle-0', 'cycle-1', ..., 'cycle-n'
+#    - All cycles are extracted and processed independently, then averaged
+#
+# The script automatically detects the project configuration and processes cycles accordingly:
+
 
 
 ## ============================================================================
@@ -141,7 +155,7 @@ query_projects_in_parallel = False # If True, use multithreading to query multip
 PROJECT_NAMES = ['<organizationName/projectName1>', '<organizationName/projectName2>']  # List of project names to query
 
 DEFAULT_CELL_VALUE = "" # If a field is not found, assign ""
-CONTEXT_LABELS = ["Left", "Right"] # Labels used for context-specific parameters (e.g., left/right)
+CONTEXT_LABELS = ["Left", "Right"] # Labels used for context-specific parameters (e.g., Left/Right or L/R)
 
 DATA_SPREADSHEET_FILENAME = 'Data Export - Pre vs post intervention study.xlsx'
 INTERVENTION_DATA_SPREADSHEET_FILENAME = 'Intervention Data Export - Pre vs post intervention study.xlsx'
@@ -159,7 +173,9 @@ MAX_ROWS_FOR_WIDTH_CALC = 100
 # - level: project, subject, session, clip
 # - source: name of the source where the parameter is stored (e.g., name, subject_metadata, session_metadata, angles_normalized, lengths_velocities_normalized, gait_params)
 # - label: name of the label (e.g. metadata key) in the source (not needed if source is "name" or "date")
-# - processing: for clip level parameters, specify if the value should be taken at the start, average, or max of the signal. None if no processing is needed (e.g., for gait_params)
+# - processing: for clip level parameters, specify if the value should be taken at the start, average, or max of the cycle data. None if no processing is needed (e.g., for gait_params)
+#      Available options: "start", "average", "max", "min", "start_single_support", "average_single_support", "max_single_support", "min_single_support", "start_double_support","average_double_support", "max_double_support", "min_double_support", "start_stance","average_stance", "max_stance", "min_stance", "start_swing", "average_swing", "max_swing", "min_swing", None
+# - needs_events: True if the parameter requires event information to be processed (e.g., to extract values at specific gait phases), False otherwise
 # - has_context: True if the parameter has context (e.g., left/right), False otherwise    
 PARAMS_TO_EXPORT = [
     # Subject-level
@@ -181,10 +197,14 @@ PARAMS_TO_EXPORT = [
     # Clip-level parameters (only for clips with conditions in CONDITION_TARGET_NAMES)
     {"column_name": "Knee Angle at Initial Contact", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"start", "has_context": True},
     {"column_name": "Peak knee extension in gait cycle", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"max", "has_context": True},
+    {"column_name": "Average knee extension in stance phase", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"average_stance", "needs_events": True, "has_context": True},
+    {"column_name": "Peak knee extension in single support phase", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"max_single_support", "needs_events": True, "has_context": True},
+    {"column_name": "Min knee extension in swing phase", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"min_swing", "needs_events": True, "has_context": True},
+    {"column_name": "Peak knee extension in double support phase", "level": "clip", "source": "angles_normalized", "label": "KneeFlexExt",  "processing":"max_double_support", "needs_events": True, "has_context": True},
     {"column_name": "Peak Ankle Dorsiflexion in gait cycle", "level": "clip", "source": "angles_normalized", "label": "DorsiPlanFlex",  "processing":"max", "has_context": True},
     {"column_name": "Medial Hamstring length at Initial Contact", "level": "clip", "source": "lengths_velocities_normalized", "label": "MedHamstringLength",  "processing":"start", "has_context": True},
     {"column_name": "Peak Medial Hamstring velocity in gait cycle", "level": "clip", "source": "lengths_velocities_normalized", "label": "MedHamstringVelocity",  "processing":"max", "has_context": True},
-    {"column_name": "Walking speed", "level": "clip", "source": "gait_params", "label": "Speed",  "processing": None,  "has_context": False},
+    {"column_name": "Walking speed", "level": "clip", "source": "gait_params", "label": "Speed",  "processing": None,  "has_context": True},
 ]
 
 # Define parameters that should be exported to INTERVENTION_DATA_SPREADSHEET_FILENAME.
@@ -398,6 +418,8 @@ def get_clip_data_sources(params_to_export: list[dict[str, Any]] | None = None, 
                 source = param.get("source")
                 if source:  # Only add non-empty sources
                     sources.add(source)
+                if param.get("needs_events", False):
+                    sources.add("event")  # Add "event" source if any parameter needs events
     
     # Extract from inclusion_criteria
     if inclusion_criteria is not None:
@@ -406,6 +428,8 @@ def get_clip_data_sources(params_to_export: list[dict[str, Any]] | None = None, 
                 source = criterion.get("source")
                 if source:  # Only add non-empty sources
                     sources.add(source)
+                if criterion.get("needs_events", False):
+                    sources.add("event")  # Add "event" source if any criterion needs events
     
     return sources
 
@@ -471,14 +495,21 @@ def filter_based_on_inclusion_criteria(data_to_validate, inclusion_criteria, sou
                 keys = [criterion["label"]]
             
             # Extract matching items with their context (left/right)
-            value = [
-                {
-                    "value": item.get("value"),
-                    "context": "left" if item.get("channel_name", "").lower().startswith("left") else "right"
-                }
-                for item in data_to_validate
-                if item.get("channel_name") in keys
-            ]
+            value = []
+            for item in data_to_validate:
+                if item.get("channel_name") in keys:
+                    # Determine which context label this channel matches
+                    channel_name = item.get("channel_name", "")
+                    matched_context = None
+                    for ctx_label in CONTEXT_LABELS:
+                        if channel_name.startswith(ctx_label):
+                            matched_context = ctx_label.lower()
+                            break
+                    if matched_context:
+                        value.append({
+                            "value": item.get("value"),
+                            "context": matched_context
+                        })
             
             if not value:
                 return False  # No matching data found
@@ -581,7 +612,7 @@ def filter_based_on_inclusion_criteria(data_to_validate, inclusion_criteria, sou
         return True, affected_side.lower()
     return True
 
-def process_clip_data(condition_clips, processing_criteria, clip_data_columns, all_jsons, file_paths):
+def process_clip_data(condition_clips, processing_criteria, clip_data_columns, all_jsons, file_paths, can_process_gcd_files):
     """
     Process JSON files for the given clips.
     Args:
@@ -590,6 +621,7 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
         clip_data_columns: List of clip data column dictionaries to populate.
         all_jsons: List to store all downloaded JSON data.
         file_paths: List to store file paths of downloaded JSON data.
+        can_process_gcd_files: Boolean indicating if the project uses GCD files (single cycle per clip).
     """
     # Ensure processing_criteria is a list
     if not isinstance(processing_criteria, list):
@@ -599,7 +631,7 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
         criterion_source = criterion.get('source', "")
         criterion_processing = criterion.get('processing')
         criterion_label = criterion.get('label', "")
-        expected_channel_names = {f"Left{criterion_label}", f"Right{criterion_label}", criterion_label}
+        expected_channel_names = {f"{ctx}{criterion_label}" for ctx in CONTEXT_LABELS} | {criterion_label}
         
         # Find columns that match this criterion's source and processing
         matching_columns = [
@@ -612,13 +644,25 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
         for clip in condition_clips:
             additional_data = clip.get('additionalData', [])
             file_found = False
+            # Retrieve event.json if the criterion has needs_events=True
+            if criterion.get("needs_events", False):
+                for ad in additional_data:
+                    if ad['dataType'] == "event":
+                        file_path = f'{clip["projectPath"]}{clip["title"]}/{ad["originalFileName"]}'
+                        if file_path in file_paths:
+                            current_index = file_paths.index(file_path)
+                            events_data = all_jsons[current_index].get('events', [])
+                        else:
+                            file_data = requests_session.get(ad['originalDataDownloadUri']).content
+                            readable_data = json.loads(file_data.decode())
+                            events_data = readable_data.get('events', [])
+                            all_jsons.append(readable_data)
+                            file_paths.append(file_path)
+                        break
+                    
             
             for ad in additional_data:
                 filename, _ = os.path.splitext(ad['originalFileName'])
-                match = re.search(r'<<<(.*?)>>>', filename)
-                if not match:
-                    continue
-                clip_file = match.group(1)
                 
                 if filename.endswith(criterion_source):
                     file_found = True
@@ -627,7 +671,7 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
                     # First check if we have already downloaded this file
                     if file_path in file_paths:
                         current_index = file_paths.index(file_path)
-                        data_channels = all_jsons[current_index]['data']
+                        data_channels = all_jsons[current_index].get('data', [])
                     else:
                         file_data = requests_session.get(ad['originalDataDownloadUri']).content
                         readable_data = json.loads(file_data.decode())
@@ -646,24 +690,86 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
                         if label_key in channel_labels:
                             channel_idx = channel_labels.index(label_key)
                             if criterion_source == "gait_params":
-                                my_signal = data_channels[channel_idx]['values']["mean"]
+                                value = data_channels[channel_idx]['values']["mean"]
                             else:
-                                my_signal = [value[clip_file] for value in data_channels[channel_idx]['values']]
-                            
-                            match criterion_processing:
-                                case "start":
-                                    value = my_signal[0]
-                                case "average":
-                                    value = sum(my_signal) / len(my_signal)
-                                case "max":
-                                    value = max(my_signal)
-                                case None:
-                                    value = my_signal
-                                case "single_stance":
-                                    # TODO: implement single stance average
+                                # Determine cycle keys to extract
+                                cycle_data_keys = []
+                                if can_process_gcd_files:
+                                    # Single cycle per file, keyed by filename extracted from <<<...>>>
+                                    match = re.search(r'<<<(.*?)>>>', filename)
+                                    if match:
+                                        cycle_data_keys = [match.group(1)]
+                                else:
+                                    # Multiple cycles per file, keyed as 'cycle-0', 'cycle-1', etc.
+                                    if data_channels[channel_idx]['values']:
+                                        cycle_data_keys = data_channels[channel_idx]['cycles'].keys()
+                                
+                                # Extract data from all cycles
+                                # Process each cycle individually, then average across cycles
+                                cycle_values = []
+                                
+                                # Determine which context label this cycle_data matches (needed for events)
+                                cycle_data_context = None
+                                for ctx_label in CONTEXT_LABELS:
+                                    if label_key.lower().startswith(ctx_label.lower()):
+                                        cycle_data_context = ctx_label
+                                        break
+                                
+                                for cycle_data_key in cycle_data_keys:
+                                    try:
+                                        cycle_data = [value[cycle_data_key] for value in data_channels[channel_idx]['values']]
+                                        
+                                        # Interpolate missing (None) values in the cycle data
+                                        cycle_data = interpolate_missing_values(cycle_data)
+                                        
+                                        if not cycle_data:
+                                            continue
+                                        
+                                        # Segment cycle data to extract gait phase if events are needed for processing
+                                        if criterion.get("needs_events", False):
+                                            # First we get the events for the specific cycle using events_data. If can_process_gcd_files is True,
+                                            # we only have a single cycle. Otherwise, we might have multiple cycles and need to use data_channels[channel_idx]['cycles']
+                                            # to find 'time-start' and 'time-end' for the specific cycle, then filter events_data to only include events within that time range.
+                                            if can_process_gcd_files:
+                                                cycle_events = events_data
+                                            else:
+                                                # If we have multiple cycles, find the specific cycle's start and end times
+                                                cycle_start = data_channels[channel_idx]['cycles'][cycle_data_key]['time-start']
+                                                cycle_end = data_channels[channel_idx]['cycles'][cycle_data_key]['time-end']
+                                                cycle_events = [event for event in events_data if cycle_start <= event['time'] <= cycle_end]
+
+                                            cycle_data = segment_gait_phase_based_on_events(cycle_data, cycle_data_context, cycle_events, criterion_processing, can_process_gcd_files)
+                                            if not cycle_data:
+                                                continue
+                                        
+                                        # Compute the statistic for this cycle
+                                        if criterion_processing is None:
+                                            cycle_value = cycle_data
+                                        elif "start" in criterion_processing:
+                                            cycle_value = cycle_data[0]
+                                        elif "average" in criterion_processing:
+                                            cycle_value = sum(cycle_data) / len(cycle_data)
+                                        elif "max" in criterion_processing:
+                                            cycle_value = max(cycle_data)
+                                        elif "min" in criterion_processing:
+                                            cycle_value = min(cycle_data)
+                                        else:
+                                            continue
+                                        
+                                        cycle_values.append(cycle_value)
+                                    except (KeyError, ValueError, ZeroDivisionError):
+                                        # Skip if key doesn't exist or calculation fails
+                                        continue
+                                
+                                # Average across all cycles
+                                if cycle_values:
+                                    if isinstance(cycle_values[0], (int, float)):
+                                        value = sum(cycle_values) / len(cycle_values)
+                                    else:
+                                        value = cycle_values
+                                else:
                                     value = DEFAULT_CELL_VALUE
-                                case _:
-                                    value = DEFAULT_CELL_VALUE
+
                             clip_data_column["value"].append(value)
                     break  # Found the file for this clip, move to next clip
             
@@ -695,6 +801,198 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
     
     return clip_data_columns
 
+def segment_gait_phase_based_on_events(cycle_data: list, cycle_data_context: str, events_data: list, criterion_processing: str, can_process_gcd_files: bool = False) -> list:
+    """
+    Segments the input cycle_data based on events and the specified processing criterion.
+    Args:
+        cycle_data: The input cycle_data to be segmented (list of values).
+        cycle_data_context: Side that needs to be considered (e.g., "Left", "Right").
+        events_data: List of event dictionaries with keys 'name', 'opposite', 'context', and 'perc' when can_process_gcd_files is True. Else, the keys are 'name', 'context', and 'time' and we need to use cycle time info to filter events for the specific cycle.
+        criterion_processing: The processing criterion that specifies how to segment (e.g., "max_stance").
+        can_process_gcd_files: Boolean indicating whether we are processing GCD files (single cycle per file with 'perc' for event timing) or older format (multiple cycles per file with 'time' for event timing).
+    Returns:
+        The segmented cycle_data based on the events and processing criterion. Returns an empty list if the gait phase cannot be extracted due to missing events or other issues.
+    """
+    if not cycle_data:
+        return []
+    
+    # Find the relevant events for this cycle and context
+    foot_off_perc = None
+    opposite_foot_off_perc = None
+    opposite_foot_strike_perc = None
+
+    if can_process_gcd_files:
+        for event in events_data:
+            event_name = event.get('name', '')
+            event_context = event.get('context', '')
+            event_perc = event.get('perc', None)
+            event_opposite = event.get('opposite')
+            
+            if event_perc is None or event_context != cycle_data_context:
+                continue
+                
+            # Find Foot Off for the same context
+            if event_name == 'Foot Off' and not event_opposite:
+                foot_off_perc = int(event_perc)
+            
+            # Find opposite foot events for single/double support phases
+            if event_opposite:
+                if event_name == 'Foot Off':
+                    opposite_foot_off_perc = int(event_perc)
+                elif event_name == 'Foot Strike':
+                    opposite_foot_strike_perc = int(event_perc)
+    else:
+        # We first need to normalize time of all events to percentage of the cycle using the time of the first and last events in the cycle
+        cycle_start_time = min(event.get('time', float('inf')) for event in events_data if event.get('context', '').lower().startswith(cycle_data_context.lower()))
+        cycle_end_time = max(event.get('time', float('-inf')) for event in events_data if event.get('context', '').lower().startswith(cycle_data_context.lower()))
+        for event in events_data:
+            event_name = event.get('name', '')
+            event_context = event.get('context', '')
+            event_time = event.get('time', None)
+            event_perc = event_time_to_perc(event_time, cycle_start_time, cycle_end_time) if event_time is not None else None
+
+            if event_context.lower().startswith(cycle_data_context.lower()):
+                if event_name == 'Foot Off':
+                    # Find Foot Off for the same context
+                    foot_off_perc = int(event_perc)
+            else:
+                # Find opposite foot events for single/double support phases
+                if event_name == 'Foot Off':
+                    opposite_foot_off_perc = int(event_perc)
+                elif event_name == 'Foot Strike':
+                    opposite_foot_strike_perc = int(event_perc)
+    
+    # Determine phase range based on criterion_processing
+    start_idx = 0
+    end_idx = len(cycle_data) - 1
+    
+    if "stance" in criterion_processing:
+        # Stance phase: from Foot Strike (0%) to Foot Off
+        if foot_off_perc is not None:
+            end_idx = min(foot_off_perc, len(cycle_data) - 1)
+        else:
+            # If no Foot Off event found, return empty cycle_data
+            return []
+    
+    elif "swing" in criterion_processing:
+        # Swing phase: from Foot Off to next Foot Strike (100%)
+        if foot_off_perc is not None:
+            start_idx = min(foot_off_perc, len(cycle_data) - 1)
+        else:
+            # If no Foot Off event found, return empty cycle_data
+            return []
+    
+    elif "single_support" in criterion_processing:
+        # Single support: when opposite foot is off the ground
+        # From opposite Foot Off to opposite Foot Strike
+        if opposite_foot_off_perc is not None and opposite_foot_strike_perc is not None:
+            start_idx = min(opposite_foot_off_perc, len(cycle_data) - 1)
+            end_idx = min(opposite_foot_strike_perc, len(cycle_data) - 1)
+        else:
+            # If events not found, return empty cycle_data
+            return []
+    
+    elif "double_support" in criterion_processing:
+        # Double support: when both feet are on the ground
+        # There are two double support periods in a gait cycle
+        # Initial double support: from Foot Strike (0%) to opposite Foot Off
+        # Terminal double support: from opposite Foot Strike to Foot Off
+        # We concatenate both periods if the relevant events are found
+
+        if foot_off_perc is not None:
+            if opposite_foot_off_perc is not None and opposite_foot_strike_perc is not None:
+                double_support_data = []
+                # Initial double support
+                initial_end_idx = min(opposite_foot_off_perc, len(cycle_data) - 1)
+                double_support_data.extend(cycle_data[0:initial_end_idx + 1])
+                # Terminal double support
+                terminal_start_idx = min(opposite_foot_strike_perc, len(cycle_data) - 1)
+                foot_off_idx = min(foot_off_perc, len(cycle_data) - 1)
+                double_support_data.extend(cycle_data[terminal_start_idx:foot_off_idx + 1])
+                return double_support_data
+        else:
+            # If opposite foot events not found, return empty cycle_data
+            return []
+    
+    # Return the segmented cycle_data
+    return cycle_data[start_idx:end_idx + 1]   
+
+def interpolate_missing_values(data: list) -> list:
+    """
+    Interpolates missing (None) values in a signal using linear interpolation.
+    Leading and trailing None values are padded with the first/last non-None value.
+    
+    Args:
+        data: List of numeric values with possible None entries
+    
+    Returns:
+        List with None values interpolated. Returns empty list if all values are None.
+        Returns original data unchanged if no None values present.
+    """
+    if not data or all(v is None for v in data):
+        return []
+    
+    # Check if there are any None values - if not, return as-is
+    if all(v is not None for v in data):
+        return data
+    
+    # Convert to numpy array for easier manipulation
+    arr = np.array(data, dtype=float)
+    
+    # Find indices of valid (non-None/non-NaN) values
+    valid_mask = ~np.isnan(arr)
+    valid_indices = np.where(valid_mask)[0]
+    
+    if len(valid_indices) == 0:
+        return []
+    
+    # Get first and last valid values for padding
+    first_valid_idx = valid_indices[0]
+    last_valid_idx = valid_indices[-1]
+    first_valid_value = arr[first_valid_idx]
+    last_valid_value = arr[last_valid_idx]
+    
+    # Pad leading None values with first valid value
+    if first_valid_idx > 0:
+        arr[:first_valid_idx] = first_valid_value
+    
+    # Pad trailing None values with last valid value
+    if last_valid_idx < len(arr) - 1:
+        arr[last_valid_idx + 1:] = last_valid_value
+    
+    # Interpolate any remaining None values in the middle
+    if np.any(np.isnan(arr)):
+        valid_mask = ~np.isnan(arr)
+        valid_indices = np.where(valid_mask)[0]
+        valid_values = arr[valid_mask]
+        
+        # Use linear interpolation for missing values
+        arr = np.interp(
+            np.arange(len(arr)),  # All indices
+            valid_indices,        # Indices with valid values
+            valid_values          # Valid values
+        )
+    
+    return arr.tolist()
+
+def event_time_to_perc(event_time, cycle_start_time, cycle_end_time):
+    """
+    Converts an event time to a percentage of the gait cycle.
+    Args:
+        event_time: The time of the event.
+        cycle_start_time: The start time of the gait cycle.
+        cycle_end_time: The end time of the gait cycle.
+    Returns:
+        The event time as a percentage of the gait cycle, or None if calculation fails.
+    """
+    try:
+        if cycle_end_time > cycle_start_time:
+            return ((event_time - cycle_start_time) / (cycle_end_time - cycle_start_time)) * 100
+        else:
+            return None
+    except (TypeError, ZeroDivisionError):
+        return None
+    
 def append_metadata_to_row(params_to_export, data_columns, data, level, source, pre_post: str = "", date_of_birth: str = ""):
     """
     Appends metadata to the data columns for a given level and source.
@@ -772,7 +1070,7 @@ def append_metadata_to_row(params_to_export, data_columns, data, level, source, 
                         continue
     return data_columns
 
-def append_clip_data_to_row(clip_params, data_columns, data, pre_post: str, all_jsons, file_paths):
+def append_clip_data_to_row(clip_params, data_columns, data, pre_post: str, all_jsons, file_paths, can_process_gcd_files):
     """
     Appends clip/trial data to the data columns for a given clip. 
     Args:
@@ -787,18 +1085,13 @@ def append_clip_data_to_row(clip_params, data_columns, data, pre_post: str, all_
         clip_data_columns = []
         for param_to_export in items:
             if param_to_export.get("has_context", False):
-                clip_data_columns.append({
-                    "channel_name": f'Left{param_to_export.get("label")}',
-                    "value": [],
-                    "processing": param_to_export.get("processing"),
-                    "column_name": f"Left {param_to_export.get('column_name')}{pre_post}"
-                })
-                clip_data_columns.append({
-                    "channel_name": f'Right{param_to_export.get("label")}',
-                    "value": [],
-                    "processing": param_to_export.get("processing"),
-                    "column_name": f"Right {param_to_export.get('column_name')}{pre_post}"
-                })
+                for context in CONTEXT_LABELS:
+                    clip_data_columns.append({
+                        "channel_name": f'{context}{param_to_export.get("label")}',
+                        "value": [],
+                        "processing": param_to_export.get("processing"),
+                        "column_name": f"{context} {param_to_export.get('column_name')}{pre_post}"
+                    })
             else:
                 clip_data_columns.append({
                     "channel_name": param_to_export.get("label"),
@@ -807,7 +1100,7 @@ def append_clip_data_to_row(clip_params, data_columns, data, pre_post: str, all_
                     "column_name": f"{param_to_export.get('column_name')}{pre_post}"
                 })
         # # Process clip-level jsons
-        clip_data_columns = process_clip_data(data, items, clip_data_columns, all_jsons, file_paths)
+        clip_data_columns = process_clip_data(data, items, clip_data_columns, all_jsons, file_paths, can_process_gcd_files)
         # Add the value in clip_data_columns to data_columns
         for clip_data_column in clip_data_columns:
             column_name = clip_data_column.get("column_name", "")
@@ -816,7 +1109,7 @@ def append_clip_data_to_row(clip_params, data_columns, data, pre_post: str, all_
         
     return data_columns
 
-def process_subjects(subjects, api):
+def process_subjects(subjects, api, can_process_gcd_files):
     """
     Process a list of subject dictionaries by applying filtering and transformation steps.
     Subjects are filtered based on inclusion criteria at potentially three different levels:
@@ -828,7 +1121,6 @@ def process_subjects(subjects, api):
         api: An instance of the API client to fetch additional data if needed.
     Returns a list of filtered patient dictionaries with their sessions.
     """
-
     grouped_inclusion_criteria = group_inclusion_criteria_by_source(INCLUSION_CRITERIA)
 
     if len(grouped_inclusion_criteria.get("subject_metadata", [])) == 0:
@@ -857,7 +1149,7 @@ def process_subjects(subjects, api):
         if 'metadata' in subject and subject['metadata'] is not None:
             subject_metadata = json.loads(subject['metadata'])
         
-        sessions = sorted(subject["sessions"], key=lambda x: x["date"])
+        sessions = sorted(subject["sessions"], key=lambda x: (x["date"] is None, x["date"] or ""))
         if len(sessions) < 2:
             # we need at least 2 sessions to have pre and post intervention data
             continue
@@ -918,7 +1210,7 @@ def process_subjects(subjects, api):
         if 'metadata' in subject and subject['metadata'] is not None:
             subject_metadata = json.loads(subject['metadata'])
         
-        sessions = sorted(subject["sessions"], key=lambda x: x["date"])
+        sessions = sorted(subject["sessions"], key=lambda x: (x["date"] is None, x["date"] or ""))
         if len(sessions) < 2:
             continue
         process_consecutive_session_pairs(
@@ -960,16 +1252,12 @@ def process_subjects(subjects, api):
                 for criterion in INCLUSION_CRITERIA:
                     if criterion.get("level", "") == "clip":
                         if criterion.get("has_context", False):
-                            clip_data_columns.append({
-                                "channel_name": f'Left{criterion.get("label")}',
-                                "value": [],
-                                "processing": criterion.get("processing"),
-                            })
-                            clip_data_columns.append({
-                                "channel_name": f'Right{criterion.get("label")}',
-                                "value": [],
-                                "processing": criterion.get("processing")
-                            })
+                            for context in CONTEXT_LABELS:
+                                clip_data_columns.append({
+                                    "channel_name": f'{context}{criterion.get("label")}',
+                                    "value": [],
+                                    "processing": criterion.get("processing"),
+                                })
                         else:
                             clip_data_columns.append({
                                 "channel_name": criterion.get("label"),
@@ -977,7 +1265,7 @@ def process_subjects(subjects, api):
                                 "processing": criterion.get("processing")
                             })
                         # # Process clip-level jsons
-                        clip_data_columns = process_clip_data(condition_clips, criterion, clip_data_columns, all_jsons, file_paths)
+                        clip_data_columns = process_clip_data(condition_clips, criterion, clip_data_columns, all_jsons, file_paths, can_process_gcd_files)
                         
                         # last layer of filtering based on trial level inclusion criteria
                         result = filter_based_on_inclusion_criteria(clip_data_columns, INCLUSION_CRITERIA, criterion.get('source', ""), n_added_sessions, subject.get("passed_side", subject_metadata.get("subject-diagnosis-laterality", None)))
@@ -1094,7 +1382,7 @@ def process_subjects(subjects, api):
                     break
                 
                 clip_params = group_clip_params_by_source(PARAMS_TO_EXPORT)
-                row = append_clip_data_to_row(clip_params, row, condition_clips, pre_post, all_jsons, file_paths)
+                row = append_clip_data_to_row(clip_params, row, condition_clips, pre_post, all_jsons, file_paths, can_process_gcd_files)
                 n_added_sessions += 1
                         
             
@@ -1440,6 +1728,27 @@ def main():
             logging.info('Available projects: %s', ', '.join(project_names))
             return
 
+    # Retrieve project configuration from all projects, and determine whether they all have the same
+    # value for projectConfiguration.featureFlags.canProcessGCDFiles. If they do, we take this value into account when
+    # processing clip-level data and events.
+    projects_info = [api.getProjectInfo(project['id']) for project in projects if project['name'] in PROJECT_NAMES]
+    can_process_gcd_files = []
+    for project_info in projects_info:
+        project_config = json.loads(project_info.get('projectConfiguration', {}).get('data', '{}'))
+        can_process_gcd_files.append(project_config.get('featureFlags', {}).get('canProcessGCDFiles', False))
+
+    # Determine if all projects have the same value for canProcessGCDFiles
+    if all(can_process_gcd_files) or not any(can_process_gcd_files):
+        can_process_gcd_files = can_process_gcd_files[0]
+    else:
+        # Raise error for inconsistent configurations - this could lead to incorrect data processing
+        raise ValueError(
+            f'Inconsistent canProcessGCDFiles configurations detected across projects.\n'
+            f'Project configurations: {dict(zip([project_info.get("name") for project_info in projects_info], can_process_gcd_files))}\n'
+            f'All projects must have the same canProcessGCDFiles value to ensure correct cycle data processing.\n'
+            f'Please select projects with consistent configurations.'
+        )
+
     # Initialize combined data columns for all projects
     combined_data_columns = {}
     combined_intervention_data_columns = {}
@@ -1460,7 +1769,7 @@ def main():
         # Process subjects in parallel using ThreadPoolExecutor
         logging.info('Processing subjects in parallel to extract session-pairs...')
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            results = list(executor.map(process_subjects, subjects_in_parallel, [api]*len(subjects_in_parallel)))
+            results = list(executor.map(process_subjects, subjects_in_parallel, [api]*len(subjects_in_parallel), [can_process_gcd_files]*len(subjects_in_parallel)))
         logging.info('Data extraction completed for all subjects. Combining results and exporting to Excel.')
 
         # results is a list of tuples: [(data_columns1, intervention_data_columns1), (data_columns2, intervention_data_columns2), ...]
@@ -1481,7 +1790,7 @@ def main():
             logging.info('Total number of subjects in project within the date range: %d', len(subjects))
             
             logging.info('Processing subjects to extract session-pairs for project: %s', pname)
-            data_columns, intervention_data_columns = process_subjects(subjects, api)
+            data_columns, intervention_data_columns = process_subjects(subjects, api, can_process_gcd_files)
             logging.info('Data processing completed for project: %s', pname)
             
             # Combine results from this project
