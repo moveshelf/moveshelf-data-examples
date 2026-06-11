@@ -234,38 +234,3 @@ class MoveshelfApiCustomized(MoveshelfApi):
             sessionId=session_id
         )
         return data['node']['clips']
-    
-    def getProjectInfo(self, project_id: str):
-        """
-        Retrieve the project template and configuration for a given project.
-
-        Args:
-            project_id (str): The ID of the project.
-
-        Returns:
-            dict: A dictionary containing the project ID, name, template data, and project configuration data.
-        """
-        data = self._dispatch_graphql(
-            '''
-            query getProjectTemplate($projectId: ID!) {
-                node(id: $projectId) {
-                    ... on Project {
-                        id
-                        name
-                        template {
-                            name
-                            data
-                        }
-                        projectConfiguration {
-                            id
-                            name
-                            data
-                        }
-                    }
-                }
-            }
-            ''',
-            projectId=project_id
-        )
-        
-        return data['node']
