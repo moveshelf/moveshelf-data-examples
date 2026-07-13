@@ -647,6 +647,8 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
             # Retrieve event.json if the criterion has needs_events=True
             if criterion.get("needs_events", False):
                 for ad in additional_data:
+                    if can_process_gcd_files and not ad["originalFileName"].startswith("<<<"):
+                        continue # json file names resulting from processed GCD files start with <<< 
                     if ad['dataType'] == "event":
                         file_path = f'{clip["projectPath"]}{clip["title"]}/{ad["originalFileName"]}'
                         if file_path in file_paths:
@@ -662,6 +664,8 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
                     
             
             for ad in additional_data:
+                if can_process_gcd_files and not ad["originalFileName"].startswith("<<<"):
+                    continue # json file names resulting from processed GCD files start with <<< 
                 filename, _ = os.path.splitext(ad['originalFileName'])
                 
                 if filename.endswith(criterion_source):
@@ -1195,6 +1199,8 @@ def process_subjects(subjects, api, can_process_gcd_files):
                 if CONDITION_TARGET_NAMES and condition_name.lower() not in CONDITION_TARGET_NAMES:
                     continue
                 for ad in c.get("additionalData", []):
+                    if can_process_gcd_files and not ad["originalFileName"].startswith("<<<"):
+                        continue # json file names resulting from processed GCD files start with <<< 
                     if any(ad["originalDataDownloadUri"].endswith(f"{source}.json") for source in clip_data_sources):
                         URLs.append(ad["originalDataDownloadUri"])
                         file_paths.append(f'{c["projectPath"]}{c["title"]}/{ad["originalFileName"]}')
