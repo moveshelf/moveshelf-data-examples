@@ -325,6 +325,23 @@ def download_json_file(url: str, session: requests.Session | None = None) -> dic
     except Exception as e:
         print(f"Failed to download or parse {url}: {e}")
         return None
+
+def should_skip_non_gcd_file(can_process_gcd_files: bool, filename: str) -> bool:
+    """
+    Determines if a file should be skipped based on GCD processing configuration.
+    
+    When processing GCD files (canProcessGCDFiles=True), only files with names starting
+    with '<<<' should be processed, as these indicate processed GCD files. All other
+    files should be skipped.
+    
+    Args:
+        can_process_gcd_files: Boolean indicating if the project uses GCD files
+        filename: The original filename to check
+    
+    Returns:
+        True if the file should be skipped, False if it should be processed
+    """
+    return can_process_gcd_files and not filename.startswith("<<<")
     
 def define_column_names(export_params: list[dict]) -> dict[str, list]:
     """
@@ -647,6 +664,8 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
             # Retrieve event.json if the criterion has needs_events=True
             if criterion.get("needs_events", False):
                 for ad in additional_data:
+                    if should_skip_non_gcd_file(can_process_gcd_files, ad["originalFileName"]):
+                        continue 
                     if ad['dataType'] == "event":
                         file_path = f'{clip["projectPath"]}{clip["title"]}/{ad["originalFileName"]}'
                         if file_path in file_paths:
@@ -662,6 +681,8 @@ def process_clip_data(condition_clips, processing_criteria, clip_data_columns, a
                     
             
             for ad in additional_data:
+                if should_skip_non_gcd_file(can_process_gcd_files, ad["originalFileName"]):
+                    continue 
                 filename, _ = os.path.splitext(ad['originalFileName'])
                 
                 if filename.endswith(criterion_source):
@@ -1195,6 +1216,8 @@ def process_subjects(subjects, api, can_process_gcd_files):
                 if CONDITION_TARGET_NAMES and condition_name.lower() not in CONDITION_TARGET_NAMES:
                     continue
                 for ad in c.get("additionalData", []):
+                    if should_skip_non_gcd_file(can_process_gcd_files, ad["originalFileName"]):
+                        continue 
                     if any(ad["originalDataDownloadUri"].endswith(f"{source}.json") for source in clip_data_sources):
                         URLs.append(ad["originalDataDownloadUri"])
                         file_paths.append(f'{c["projectPath"]}{c["title"]}/{ad["originalFileName"]}')
