@@ -331,7 +331,7 @@ def should_skip_non_gcd_file(can_process_gcd_files: bool, filename: str) -> bool
     Determines if a file should be skipped based on GCD processing configuration.
     
     When processing GCD files (canProcessGCDFiles=True), only files with names starting
-    with '<<<' should be processed, as these indicate processed GCD files. All other
+    with '<<<' and not containing '_fka>>>' should be processed, as these indicate processed regular GCD files. All other
     files should be skipped.
     
     Args:
@@ -341,7 +341,39 @@ def should_skip_non_gcd_file(can_process_gcd_files: bool, filename: str) -> bool
     Returns:
         True if the file should be skipped, False if it should be processed
     """
-    return can_process_gcd_files and not filename.startswith("<<<")
+    return can_process_gcd_files and not (filename.startswith("<<<") and "_fka>>>" not in filename)
+
+def sort_non_cancelled_sessions(sessions: list[dict]) -> list[dict]:
+    """
+    Filters and sorts sessions by date, excluding cancelled or no-show sessions.
+    
+    Excludes sessions where the 'sessioninfo-cancellation' metadata field has values
+    in ['cancelled', 'no show'].
+    
+    Args:
+        sessions: List of session dictionaries to filter and sort
+    
+    Returns:
+        A list of non-cancelled sessions, sorted and filtered by date (None dates at the end)
+    """
+    filtered_sessions = []
+    
+    for session in sessions:
+        # Extract session metadata to check cancellation status
+        should_exclude = False
+        if 'metadata' in session and session['metadata'] is not None:
+            session_metadata = json.loads(session['metadata'])
+            if 'metadata' in session_metadata and session_metadata['metadata'] is not None:
+                my_session_metadata = session_metadata['metadata']
+                cancellation_value = my_session_metadata.get('sessioninfo-cancellation', '')
+                if cancellation_value.lower() in ['cancelled', 'no show']:
+                    should_exclude = True
+        
+        if not should_exclude:
+            filtered_sessions.append(session)
+    
+    # Sort filtered sessions by date 
+    return sorted(filtered_sessions, key=lambda x: (x["date"] is None, x["date"] or ""))
     
 def define_column_names(export_params: list[dict]) -> dict[str, list]:
     """
@@ -1170,7 +1202,7 @@ def process_subjects(subjects, api, can_process_gcd_files):
         if 'metadata' in subject and subject['metadata'] is not None:
             subject_metadata = json.loads(subject['metadata'])
         
-        sessions = sorted(subject["sessions"], key=lambda x: (x["date"] is None, x["date"] or ""))
+        sessions = sort_non_cancelled_sessions(subject["sessions"])
         if len(sessions) < 2:
             # we need at least 2 sessions to have pre and post intervention data
             continue
@@ -1233,7 +1265,7 @@ def process_subjects(subjects, api, can_process_gcd_files):
         if 'metadata' in subject and subject['metadata'] is not None:
             subject_metadata = json.loads(subject['metadata'])
         
-        sessions = sorted(subject["sessions"], key=lambda x: (x["date"] is None, x["date"] or ""))
+        sessions = sort_non_cancelled_sessions(subject["sessions"])
         if len(sessions) < 2:
             continue
         process_consecutive_session_pairs(
