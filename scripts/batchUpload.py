@@ -49,6 +49,9 @@ defaultProject = '<organizationName/projectName>'  # e.g. support/demoProject
 # Adjust to your own needs - Filter your extension to upload
 extensions_to_upload = ('_TheiaKinematics.c3d', '.settings.xml','.avi')  # To upload all files, leave empty.
 
+# Files with names starting with these prefixes will be skipped (case-insensitive)
+file_prefixes_to_skip = ['static']  # Add more prefixes to skip if needed. To not skip any files based on prefixes, leave empty.
+
 # For the current version of supported data types on Moveshelf, see https://moveshelf.com/docs/edit#supporteddatatypes
 # All files (filtered or unfiltered) will be exported with datatype "raw", except:
 allowed_files_video = ["mp4", "avi", "mov", "mkv"]
@@ -411,7 +414,7 @@ def prepareFilesinSubjectFolder(subjectdata_folder):
 
                 filepath = os.path.join(condition_path, filename)
                 file_extension = filename.split(".", 1)[-1]
-                if len(extensions_to_upload)==0 or filename.endswith(extensions_to_upload):
+                if (len(extensions_to_upload)==0 or filename.endswith(extensions_to_upload)) and not any(filename.lower().startswith(prefix) for prefix in file_prefixes_to_skip):
                     # Trial name parsing
                     if not '_' in filename:
                         trial_name = filename.split(".", 1)[0]
