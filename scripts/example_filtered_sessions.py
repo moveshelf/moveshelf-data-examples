@@ -5,14 +5,13 @@ Script to retrieve and print filtered sessions and export metadata to Excel.
 #from scripts.download_gait_abnormalities_example import file_name
 import os, sys, json
 import requests
+parentFolder = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, parentFolder)
+
+from moveshelf_api.api import MoveshelfApi, Metadata
 import utils
 from concurrent.futures import ThreadPoolExecutor
 from utils import MetadataExcelExporter
-parentFolder = os.getcwd() 
-api_path = os.path.abspath(os.path.join(parentFolder, '..', 'moveshelf-python-api', 'src'))
-sys.path.insert(0, api_path)
-# --------------------#
-from moveshelf_api.api import MoveshelfApi, Metadata
 
 # Use a requests.Session for connection pooling
 requests_session = requests.Session()
